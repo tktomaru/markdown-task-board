@@ -1,0 +1,75 @@
+{
+  "app": {
+    "title": "TaskMD",
+    "tagline": "Markdown-first task management with AI handoff support"
+  },
+  "nav": {
+    "home": "Home",
+    "projects": "Projects",
+    "settings": "Settings"
+  },
+  "home": {
+    "welcome": "Welcome to TaskMD",
+    "tagline": "Markdown-first task management with AI handoff support",
+    "gettingStarted": "Getting Started",
+    "steps": {
+      "createProject": "Create a project",
+      "addTasks": "Add tasks with Markdown",
+      "useSavedViews": "Use Saved Views to filter tasks",
+      "generateTaskPacks": "Generate Task Packs for AI collaboration"
+    },
+    "projectsTitle": "Projects",
+    "noProjects": "No projects yet",
+    "createFirstProject": "Create your first project to get started",
+    "createProject": "Create Project"
+  },
+  "project": {
+    "create": "Create Project",
+    "edit": "Edit Project",
+    "delete": "Delete Project",
+    "name": "Project Name",
+    "description": "Description",
+    "visibility": "Visibility",
+    "members": "Members",
+    "tasksTitle": "Tasks",
+    "noTasks": "No tasks yet",
+    "createFirstTask": "Create your first task to get started",
+    "newTask": "New Task",
+    "loading": "Loading..."
+  },
+  "task": {
+    "create": "Create Task",
+    "edit": "Edit Task",
+    "delete": "Delete Task",
+    "title": "Title",
+    "status": "Status",
+    "priority": "Priority",
+    "assignee": "Assignee",
+    "dueDate": "Due Date",
+    "labels": "Labels",
+    "noTasks": "No tasks",
+    "listWillBeDisplayed": "Task list will be displayed here"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "close": "Close",
+    "search": "Search",
+    "filter": "Filter",
+    "sort": "Sort",
+    "theme": "Theme",
+    "language": "Language"
+  },
+  "theme": {
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "language": {
+    "en": "English",
+    "ja": "日本語"
+  }
+}

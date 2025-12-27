@@ -1,0 +1,124 @@
+services:
+  # PostgreSQL Database
+  taskmd-postgres:
+    image: postgres:16-alpine
+    container_name: taskmd-postgres
+    environment:
+      POSTGRES_DB: ${DB_NAME:-taskmd}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Database password is required}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    volumes:
+      - ./docker/postgres_data:/var/lib/postgresql/data
+      - ./db/schema:/docker-entrypoint-initdb.d:ro
+    # ports:
+    #   - "${DB_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    # networks:
+    #   - taskmd-network
+
+  # Meilisearch (Full-text search engine)
+  taskmd-meilisearch:
+    image: getmeili/meilisearch:v1.6
+    container_name: taskmd-meilisearch
+    environment:
+      MEILI_MASTER_KEY: ${MEILISEARCH_KEY:-changeme-insecure-key}
+      MEILI_ENV: ${MEILI_ENV:-development}
+    volumes:
+      - ./docker/meilisearch_data:/meili_data
+    # ports:
+    #   - "${MEILISEARCH_PORT:-7700}:7700"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--spider", "http://taskmd-meilisearch:7700/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 7
+    restart: unless-stopped
+    # networks:
+    #   - taskmd-network
+
+  # Backend API Server
+  taskmd-server:
+    build:
+      context: ./taskmd-server
+      dockerfile: Dockerfile
+    container_name: taskmd-server
+    environment:
+      # Server
+      PORT: 8080
+      HOST: 0.0.0.0
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost}
+
+      # Database
+      DB_HOST: taskmd-postgres
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:?Database password is required}
+      DB_NAME: ${DB_NAME:-taskmd}
+      DB_SSLMODE: disable
+
+      # Auth
+      AUTH_MODE: ${AUTH_MODE:-password}
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-24h}
+
+      # OIDC (if enabled)
+      OIDC_ISSUER: ${OIDC_ISSUER:-}
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}
+      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
+
+      # Logging
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      LOG_FORMAT: ${LOG_FORMAT:-json}
+
+      # Meilisearch (optional)
+      MEILISEARCH_HOST: ${MEILISEARCH_HOST:-http://taskmd-meilisearch:7700}
+      MEILISEARCH_KEY: ${MEILISEARCH_KEY:-changeme-insecure-key}
+    ports:
+      - "${API_PORT:-8080}:8080"
+    depends_on:
+      taskmd-postgres:
+        condition: service_healthy
+      taskmd-meilisearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://taskmd-server:8080/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    # networks:
+    #   - taskmd-network
+
+  # Frontend Web Application
+  taskmd-web:
+    build:
+      context: ./taskmd-web
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE: ${VITE_API_BASE:-http://localhost:8080/api/v1}
+    container_name: taskmd-web
+    environment:
+      VITE_API_BASE: ${VITE_API_BASE:-http://localhost:8080/api/v1}
+    ports:
+      - "${WEB_PORT:-80}:80"
+    depends_on:
+      - taskmd-server
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    # networks:
+      # - taskmd-network
+# 
+# networks:
+#   taskmd-network:
+#     driver: bridge

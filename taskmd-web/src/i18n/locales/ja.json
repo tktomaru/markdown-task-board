@@ -1,0 +1,75 @@
+{
+  "app": {
+    "title": "TaskMD",
+    "tagline": "Markdownファーストのタスク管理、AI連携サポート付き"
+  },
+  "nav": {
+    "home": "ホーム",
+    "projects": "プロジェクト",
+    "settings": "設定"
+  },
+  "home": {
+    "welcome": "TaskMDへようこそ",
+    "tagline": "Markdownファーストのタスク管理、AI連携サポート付き",
+    "gettingStarted": "はじめに",
+    "steps": {
+      "createProject": "プロジェクトを作成",
+      "addTasks": "Markdownでタスクを追加",
+      "useSavedViews": "保存ビューでタスクをフィルタ",
+      "generateTaskPacks": "AI連携用のタスクパックを生成"
+    },
+    "projectsTitle": "プロジェクト",
+    "noProjects": "プロジェクトがまだありません",
+    "createFirstProject": "最初のプロジェクトを作成して始めましょう",
+    "createProject": "プロジェクトを作成"
+  },
+  "project": {
+    "create": "プロジェクトを作成",
+    "edit": "プロジェクトを編集",
+    "delete": "プロジェクトを削除",
+    "name": "プロジェクト名",
+    "description": "説明",
+    "visibility": "公開設定",
+    "members": "メンバー",
+    "tasksTitle": "タスク",
+    "noTasks": "タスクがまだありません",
+    "createFirstTask": "最初のタスクを作成して始めましょう",
+    "newTask": "新しいタスク",
+    "loading": "読み込み中..."
+  },
+  "task": {
+    "create": "タスクを作成",
+    "edit": "タスクを編集",
+    "delete": "タスクを削除",
+    "title": "タイトル",
+    "status": "ステータス",
+    "priority": "優先度",
+    "assignee": "担当者",
+    "dueDate": "期限",
+    "labels": "ラベル",
+    "noTasks": "タスクがありません",
+    "listWillBeDisplayed": "タスク一覧がここに表示されます"
+  },
+  "common": {
+    "save": "保存",
+    "cancel": "キャンセル",
+    "delete": "削除",
+    "edit": "編集",
+    "create": "作成",
+    "close": "閉じる",
+    "search": "検索",
+    "filter": "フィルター",
+    "sort": "並び替え",
+    "theme": "テーマ",
+    "language": "言語"
+  },
+  "theme": {
+    "light": "ライト",
+    "dark": "ダーク",
+    "system": "システム"
+  },
+  "language": {
+    "en": "English",
+    "ja": "日本語"
+  }
+}

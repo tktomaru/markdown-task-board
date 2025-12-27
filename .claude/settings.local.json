@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(chmod:*)",
+      "Bash(go mod init:*)",
+      "Bash(make test-unit:*)",
+      "Bash(./scripts/test-unit.sh:*)",
+      "Bash(make test-coverage:*)",
+      "Bash(go test:*)",
+      "Bash(go build:*)",
+      "Bash(sudo docker compose logs:*)",
+      "Bash(docker compose logs:*)",
+      "Bash(curl:*)"
+    ]
+  }
+}
