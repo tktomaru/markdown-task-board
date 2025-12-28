@@ -45,7 +45,33 @@ export default function ProjectPage() {
     <div>
       {/* Project Header */}
       <div style={{ marginBottom: '2rem' }}>
-        <h1>{project?.name || projectId}</h1>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <h1>{project?.name || projectId}</h1>
+          <button
+            onClick={() => navigate(`/projects/${projectId}/views`)}
+            style={{
+              backgroundColor: 'transparent',
+              color: 'var(--color-primary)',
+              border: '2px solid var(--color-primary)',
+              padding: '0.5rem 1rem',
+              fontSize: '0.875rem',
+              fontWeight: '600',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--color-primary)'
+              e.currentTarget.style.color = 'white'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent'
+              e.currentTarget.style.color = 'var(--color-primary)'
+            }}
+          >
+            📊 Saved Views
+          </button>
+        </div>
         {project?.description && (
           <p style={{ marginTop: '0.5rem', color: 'var(--color-text-secondary)' }}>
             {project.description}

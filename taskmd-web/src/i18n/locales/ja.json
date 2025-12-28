@@ -71,5 +71,13 @@
   "language": {
     "en": "English",
     "ja": "日本語"
+  },
+  "sidebar": {
+    "savedViews": "保存ビュー",
+    "manageViews": "ビューを管理",
+    "selectProject": "プロジェクトを選択してください",
+    "loading": "読み込み中...",
+    "noViews": "保存されたビューがありません",
+    "createView": "ビューを作成"
   }
 }
