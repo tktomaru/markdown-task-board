@@ -320,6 +320,22 @@ func (p *QueryParser) resolveRelativeDate(expr string) (string, error) {
 		return now.AddDate(0, 0, -days).Format("2006-01-02"), nil
 	}
 
+	// -Nd (N days ago)
+	minusDaysPattern := regexp.MustCompile(`^-(\d+)d$`)
+	if matches := minusDaysPattern.FindStringSubmatch(expr); matches != nil {
+		var days int
+		fmt.Sscanf(matches[1], "%d", &days)
+		return now.AddDate(0, 0, -days).Format("2006-01-02"), nil
+	}
+
+	// +Nd (N days from now)
+	plusDaysPattern := regexp.MustCompile(`^\+(\d+)d$`)
+	if matches := plusDaysPattern.FindStringSubmatch(expr); matches != nil {
+		var days int
+		fmt.Sscanf(matches[1], "%d", &days)
+		return now.AddDate(0, 0, days).Format("2006-01-02"), nil
+	}
+
 	// overdue
 	if expr == "overdue" {
 		return now.Format("2006-01-02"), nil // Will be used with < operator
@@ -331,10 +347,12 @@ func (p *QueryParser) resolveRelativeDate(expr string) (string, error) {
 // isDateField checks if a field is a date field
 func isDateField(field string) bool {
 	dateFields := map[string]bool{
-		"due":     true,
-		"start":   true,
-		"created": true,
-		"updated": true,
+		"due":        true,
+		"due_date":   true,
+		"start":      true,
+		"start_date": true,
+		"created":    true,
+		"updated":    true,
 	}
 	return dateFields[field]
 }

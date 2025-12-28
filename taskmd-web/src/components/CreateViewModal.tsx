@@ -22,6 +22,10 @@ interface FilterCondition {
   startDateTo?: string
   dueDateFrom?: string
   dueDateTo?: string
+  startDateFromRelative?: string  // e.g., "-7d", "today", "+3d"
+  startDateToRelative?: string
+  dueDateFromRelative?: string
+  dueDateToRelative?: string
 }
 
 export default function CreateViewModal({ isOpen, onClose, projectId, view }: CreateViewModalProps) {
@@ -184,16 +188,25 @@ export default function CreateViewModal({ isOpen, onClose, projectId, view }: Cr
       }
     }
 
-    if (filters.startDateFrom && filters.startDateFrom.trim() !== '') {
+    // Use relative dates if specified, otherwise use absolute dates
+    if (filters.startDateFromRelative && filters.startDateFromRelative.trim() !== '') {
+      parts.push(`start_date:>=${filters.startDateFromRelative}`)
+    } else if (filters.startDateFrom && filters.startDateFrom.trim() !== '') {
       parts.push(`start_date:>=${filters.startDateFrom}`)
     }
-    if (filters.startDateTo && filters.startDateTo.trim() !== '') {
+    if (filters.startDateToRelative && filters.startDateToRelative.trim() !== '') {
+      parts.push(`start_date:<=${filters.startDateToRelative}`)
+    } else if (filters.startDateTo && filters.startDateTo.trim() !== '') {
       parts.push(`start_date:<=${filters.startDateTo}`)
     }
-    if (filters.dueDateFrom && filters.dueDateFrom.trim() !== '') {
+    if (filters.dueDateFromRelative && filters.dueDateFromRelative.trim() !== '') {
+      parts.push(`due_date:>=${filters.dueDateFromRelative}`)
+    } else if (filters.dueDateFrom && filters.dueDateFrom.trim() !== '') {
       parts.push(`due_date:>=${filters.dueDateFrom}`)
     }
-    if (filters.dueDateTo && filters.dueDateTo.trim() !== '') {
+    if (filters.dueDateToRelative && filters.dueDateToRelative.trim() !== '') {
+      parts.push(`due_date:<=${filters.dueDateToRelative}`)
+    } else if (filters.dueDateTo && filters.dueDateTo.trim() !== '') {
       parts.push(`due_date:<=${filters.dueDateTo}`)
     }
 
@@ -435,33 +448,63 @@ export default function CreateViewModal({ isOpen, onClose, projectId, view }: Cr
             <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>
               開始日範囲
             </label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-              <input
-                type="date"
-                value={filters.startDateFrom || ''}
-                onChange={(e) => setFilters({ ...filters, startDateFrom: e.target.value })}
-                placeholder="開始"
-                style={{
-                  padding: '0.5rem',
-                  borderRadius: '4px',
-                  border: '1px solid var(--color-border)',
-                  backgroundColor: 'var(--color-bg-secondary)',
-                  color: 'var(--color-text)',
-                }}
-              />
-              <input
-                type="date"
-                value={filters.startDateTo || ''}
-                onChange={(e) => setFilters({ ...filters, startDateTo: e.target.value })}
-                placeholder="終了"
-                style={{
-                  padding: '0.5rem',
-                  borderRadius: '4px',
-                  border: '1px solid var(--color-border)',
-                  backgroundColor: 'var(--color-bg-secondary)',
-                  color: 'var(--color-text)',
-                }}
-              />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.5rem' }}>
+              <div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)', marginBottom: '0.25rem' }}>開始（以降）</div>
+                <select
+                  value={filters.startDateFromRelative || ''}
+                  onChange={(e) => setFilters({ ...filters, startDateFromRelative: e.target.value, startDateFrom: '' })}
+                  style={{
+                    width: '100%',
+                    padding: '0.5rem',
+                    borderRadius: '4px',
+                    border: '1px solid var(--color-border)',
+                    backgroundColor: 'var(--color-bg-secondary)',
+                    color: 'var(--color-text)',
+                  }}
+                >
+                  <option value="">指定なし</option>
+                  <option value="-30d">30日前</option>
+                  <option value="-14d">14日前</option>
+                  <option value="-7d">7日前</option>
+                  <option value="-3d">3日前</option>
+                  <option value="-1d">1日前</option>
+                  <option value="today">今日</option>
+                  <option value="+1d">1日後</option>
+                  <option value="+3d">3日後</option>
+                  <option value="+7d">7日後</option>
+                  <option value="+14d">14日後</option>
+                  <option value="+30d">30日後</option>
+                </select>
+              </div>
+              <div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)', marginBottom: '0.25rem' }}>終了（以前）</div>
+                <select
+                  value={filters.startDateToRelative || ''}
+                  onChange={(e) => setFilters({ ...filters, startDateToRelative: e.target.value, startDateTo: '' })}
+                  style={{
+                    width: '100%',
+                    padding: '0.5rem',
+                    borderRadius: '4px',
+                    border: '1px solid var(--color-border)',
+                    backgroundColor: 'var(--color-bg-secondary)',
+                    color: 'var(--color-text)',
+                  }}
+                >
+                  <option value="">指定なし</option>
+                  <option value="-30d">30日前</option>
+                  <option value="-14d">14日前</option>
+                  <option value="-7d">7日前</option>
+                  <option value="-3d">3日前</option>
+                  <option value="-1d">1日前</option>
+                  <option value="today">今日</option>
+                  <option value="+1d">1日後</option>
+                  <option value="+3d">3日後</option>
+                  <option value="+7d">7日後</option>
+                  <option value="+14d">14日後</option>
+                  <option value="+30d">30日後</option>
+                </select>
+              </div>
             </div>
           </div>
 
@@ -469,33 +512,63 @@ export default function CreateViewModal({ isOpen, onClose, projectId, view }: Cr
             <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>
               期限日範囲
             </label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-              <input
-                type="date"
-                value={filters.dueDateFrom || ''}
-                onChange={(e) => setFilters({ ...filters, dueDateFrom: e.target.value })}
-                placeholder="開始"
-                style={{
-                  padding: '0.5rem',
-                  borderRadius: '4px',
-                  border: '1px solid var(--color-border)',
-                  backgroundColor: 'var(--color-bg-secondary)',
-                  color: 'var(--color-text)',
-                }}
-              />
-              <input
-                type="date"
-                value={filters.dueDateTo || ''}
-                onChange={(e) => setFilters({ ...filters, dueDateTo: e.target.value })}
-                placeholder="終了"
-                style={{
-                  padding: '0.5rem',
-                  borderRadius: '4px',
-                  border: '1px solid var(--color-border)',
-                  backgroundColor: 'var(--color-bg-secondary)',
-                  color: 'var(--color-text)',
-                }}
-              />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.5rem' }}>
+              <div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)', marginBottom: '0.25rem' }}>開始（以降）</div>
+                <select
+                  value={filters.dueDateFromRelative || ''}
+                  onChange={(e) => setFilters({ ...filters, dueDateFromRelative: e.target.value, dueDateFrom: '' })}
+                  style={{
+                    width: '100%',
+                    padding: '0.5rem',
+                    borderRadius: '4px',
+                    border: '1px solid var(--color-border)',
+                    backgroundColor: 'var(--color-bg-secondary)',
+                    color: 'var(--color-text)',
+                  }}
+                >
+                  <option value="">指定なし</option>
+                  <option value="-30d">30日前</option>
+                  <option value="-14d">14日前</option>
+                  <option value="-7d">7日前</option>
+                  <option value="-3d">3日前</option>
+                  <option value="-1d">1日前</option>
+                  <option value="today">今日</option>
+                  <option value="+1d">1日後</option>
+                  <option value="+3d">3日後</option>
+                  <option value="+7d">7日後</option>
+                  <option value="+14d">14日後</option>
+                  <option value="+30d">30日後</option>
+                </select>
+              </div>
+              <div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)', marginBottom: '0.25rem' }}>終了（以前）</div>
+                <select
+                  value={filters.dueDateToRelative || ''}
+                  onChange={(e) => setFilters({ ...filters, dueDateToRelative: e.target.value, dueDateTo: '' })}
+                  style={{
+                    width: '100%',
+                    padding: '0.5rem',
+                    borderRadius: '4px',
+                    border: '1px solid var(--color-border)',
+                    backgroundColor: 'var(--color-bg-secondary)',
+                    color: 'var(--color-text)',
+                  }}
+                >
+                  <option value="">指定なし</option>
+                  <option value="-30d">30日前</option>
+                  <option value="-14d">14日前</option>
+                  <option value="-7d">7日前</option>
+                  <option value="-3d">3日前</option>
+                  <option value="-1d">1日前</option>
+                  <option value="today">今日</option>
+                  <option value="+1d">1日後</option>
+                  <option value="+3d">3日後</option>
+                  <option value="+7d">7日後</option>
+                  <option value="+14d">14日後</option>
+                  <option value="+30d">30日後</option>
+                </select>
+              </div>
             </div>
           </div>
 
