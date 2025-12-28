@@ -41,12 +41,19 @@ error() {
 
 # Parse arguments
 SEED_DATA=false
+SEED_TYPE="dev"
 DROP_EXISTING=false
 
 while [[ $# -gt 0 ]]; do
     case $1 in
         --seed)
             SEED_DATA=true
+            SEED_TYPE="dev"
+            shift
+            ;;
+        --seed-prod)
+            SEED_DATA=true
+            SEED_TYPE="prod"
             shift
             ;;
         --drop)
@@ -57,9 +64,10 @@ while [[ $# -gt 0 ]]; do
             echo "Usage: $0 [OPTIONS]"
             echo ""
             echo "Options:"
-            echo "  --seed       Load development seed data"
-            echo "  --drop       Drop existing database before creating (DANGEROUS!)"
-            echo "  --help, -h   Show this help message"
+            echo "  --seed           Load development seed data (dev_seed.sql)"
+            echo "  --seed-prod      Load production seed data (production_seed.sql)"
+            echo "  --drop           Drop existing database before creating (DANGEROUS!)"
+            echo "  --help, -h       Show this help message"
             echo ""
             echo "Environment variables:"
             echo "  DB_HOST      Database host (default: localhost)"
@@ -137,9 +145,23 @@ info "✓ All migrations applied"
 
 # Load seed data if requested
 if [ "$SEED_DATA" = true ]; then
-    info "Loading development seed data..."
-    $PSQL_CMD -d $DB_NAME -f "$SCRIPT_DIR/seeds/dev_seed.sql"
-    info "✓ Seed data loaded"
+    if [ "$SEED_TYPE" = "prod" ]; then
+        if [ -f "$SCRIPT_DIR/seeds/production_seed.sql" ]; then
+            info "Loading production seed data..."
+            $PSQL_CMD -d $DB_NAME -f "$SCRIPT_DIR/seeds/production_seed.sql"
+            info "✓ Production seed data loaded"
+        else
+            warn "Production seed file not found: $SCRIPT_DIR/seeds/production_seed.sql"
+            warn "You can create it by running: ./db/export_data.sh"
+            info "Loading development seed data instead..."
+            $PSQL_CMD -d $DB_NAME -f "$SCRIPT_DIR/seeds/dev_seed.sql"
+            info "✓ Development seed data loaded"
+        fi
+    else
+        info "Loading development seed data..."
+        $PSQL_CMD -d $DB_NAME -f "$SCRIPT_DIR/seeds/dev_seed.sql"
+        info "✓ Development seed data loaded"
+    fi
 fi
 
 # Verify installation

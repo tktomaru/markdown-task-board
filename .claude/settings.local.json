@@ -17,7 +17,8 @@
       "Bash(./init.sh)",
       "Bash(sudo apt-get:*)",
       "Bash(sudo apt-get install:*)",
-      "Bash(sudo docker compose:*)"
+      "Bash(sudo docker compose:*)",
+      "Bash(./export_data.sh:*)"
     ]
   }
 }
