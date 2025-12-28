@@ -15,6 +15,7 @@ export default function ViewDetailPage() {
     queryKey: ['view', projectId, viewId],
     queryFn: () => savedViewsApi.get(projectId!, viewId!),
     enabled: !!projectId && !!viewId,
+    staleTime: 0,
   })
 
   const { data: tasks, isLoading: tasksLoading, error: tasksError } = useQuery({
@@ -53,6 +54,8 @@ export default function ViewDetailPage() {
       }
     },
     enabled: !!projectId && !!viewId && !!view,
+    staleTime: 0,
+    refetchOnMount: 'always',
   })
 
   const { toastMessage: copyToastMessage, copyTasksAsMarkdown, copyTasksAsText } = useCopyTasks()
