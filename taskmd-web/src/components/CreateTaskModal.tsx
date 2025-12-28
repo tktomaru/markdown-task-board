@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { createTask } from '@/lib/api'
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
+import { createTask, getTasks } from '@/lib/api'
 
 interface CreateTaskModalProps {
   isOpen: boolean
@@ -15,8 +15,16 @@ export default function CreateTaskModal({ isOpen, onClose, projectId }: CreateTa
   const [title, setTitle] = useState('')
   const [markdownBody, setMarkdownBody] = useState('')
   const [priority, setPriority] = useState('P2')
+  const [parentId, setParentId] = useState<string>('')
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+
+  // Fetch tasks for parent selection
+  const { data: tasks } = useQuery({
+    queryKey: ['tasks', projectId],
+    queryFn: () => getTasks(projectId),
+    enabled: isOpen,
+  })
 
   const createMutation = useMutation({
     mutationFn: (data: any) => createTask(projectId, data),
@@ -31,6 +39,7 @@ export default function CreateTaskModal({ isOpen, onClose, projectId }: CreateTa
         setTitle('')
         setMarkdownBody('')
         setPriority('P2')
+        setParentId('')
         setSuccess(false)
         onClose()
       }, 1000)
@@ -57,7 +66,7 @@ export default function CreateTaskModal({ isOpen, onClose, projectId }: CreateTa
 id: ${taskId}
 status: open
 priority: ${priority}
-assignees: []
+${parentId ? `parent_id: ${parentId}\n` : ''}assignees: []
 labels: []
 \`\`\`
 
@@ -76,6 +85,7 @@ ${markdownBody || '## 詳細\n\nタスクの詳細をここに記載します。
     setTitle('')
     setMarkdownBody('')
     setPriority('P2')
+    setParentId('')
     setError(null)
     setSuccess(false)
     onClose()
@@ -182,6 +192,43 @@ ${markdownBody || '## 詳細\n\nタスクの詳細をここに記載します。
               <option value="P3">P3 - 余裕があれば</option>
               <option value="P4">P4 - いつか</option>
             </select>
+          </div>
+
+          <div style={{ marginBottom: '1rem' }}>
+            <label style={{
+              display: 'block',
+              marginBottom: '0.5rem',
+              fontSize: '0.875rem',
+              fontWeight: 500,
+            }}>
+              親タスク（グループ化）
+            </label>
+            <select
+              value={parentId}
+              onChange={(e) => setParentId(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '0.5rem',
+                borderRadius: '4px',
+                border: '1px solid var(--color-border)',
+                backgroundColor: 'var(--color-bg)',
+                color: 'var(--color-text)',
+              }}
+            >
+              <option value="">なし（トップレベルタスク）</option>
+              {tasks?.map(task => (
+                <option key={task.id} value={task.id}>
+                  {task.title}
+                </option>
+              ))}
+            </select>
+            <p style={{
+              marginTop: '0.5rem',
+              fontSize: '0.75rem',
+              color: 'var(--color-text-tertiary)',
+            }}>
+              親タスクを設定すると、階層的にグループ化されます
+            </p>
           </div>
 
           <div style={{ marginBottom: '1.5rem' }}>

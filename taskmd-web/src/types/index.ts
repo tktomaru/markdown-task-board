@@ -5,6 +5,7 @@ export type TaskPriority = 'P0' | 'P1' | 'P2' | 'P3' | 'P4'
 export interface Task {
   id: string
   project_id: string
+  parent_id?: string
   title: string
   status: TaskStatus
   priority: TaskPriority

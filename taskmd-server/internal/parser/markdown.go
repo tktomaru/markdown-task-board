@@ -14,6 +14,7 @@ import (
 // TaskMetadata represents the YAML frontmatter metadata
 type TaskMetadata struct {
 	ID        string                 `yaml:"id"`
+	ParentID  *string                `yaml:"parent_id"`
 	Status    string                 `yaml:"status"`
 	Priority  string                 `yaml:"priority"`
 	Assignees []string               `yaml:"assignees"`
@@ -133,6 +134,7 @@ func (pt *ParsedTask) ToTask(projectID string) (*models.Task, error) {
 	task := &models.Task{
 		ID:           pt.Metadata.ID,
 		ProjectID:    projectID,
+		ParentID:     pt.Metadata.ParentID,
 		Title:        pt.Title,
 		Status:       models.TaskStatus(pt.Metadata.Status),
 		Priority:     models.TaskPriority(pt.Metadata.Priority),
@@ -201,6 +203,10 @@ func GenerateMarkdown(task *models.Task) string {
 	sb.WriteString(fmt.Sprintf("id: %s\n", task.ID))
 	sb.WriteString(fmt.Sprintf("status: %s\n", task.Status))
 	sb.WriteString(fmt.Sprintf("priority: %s\n", task.Priority))
+
+	if task.ParentID != nil {
+		sb.WriteString(fmt.Sprintf("parent_id: %s\n", *task.ParentID))
+	}
 
 	if len(task.Assignees) > 0 {
 		sb.WriteString("assignees: [")

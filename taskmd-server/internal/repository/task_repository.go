@@ -23,11 +23,11 @@ func NewTaskRepository(db *sqlx.DB) *TaskRepository {
 func (r *TaskRepository) Create(ctx context.Context, task *models.Task) error {
 	query := `
 		INSERT INTO tasks (
-			id, project_id, title, status, priority,
+			id, project_id, parent_id, title, status, priority,
 			assignees, labels, start_date, due_date,
 			markdown_body, extra_meta, created_by, updated_by
 		) VALUES (
-			:id, :project_id, :title, :status, :priority,
+			:id, :project_id, :parent_id, :title, :status, :priority,
 			:assignees, :labels, :start_date, :due_date,
 			:markdown_body, :extra_meta, :created_by, :updated_by
 		)
@@ -119,6 +119,7 @@ func (r *TaskRepository) List(ctx context.Context, projectID string, filters *Ta
 func (r *TaskRepository) Update(ctx context.Context, task *models.Task) error {
 	query := `
 		UPDATE tasks SET
+			parent_id = :parent_id,
 			title = :title,
 			status = :status,
 			priority = :priority,

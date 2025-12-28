@@ -13,7 +13,11 @@
       "Bash(curl:*)",
       "Bash(npm install:*)",
       "Bash(find:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(./init.sh)",
+      "Bash(sudo apt-get:*)",
+      "Bash(sudo apt-get install:*)",
+      "Bash(sudo docker compose:*)"
     ]
   }
 }

@@ -4,6 +4,14 @@
 
 set -e  # Exit on error
 
+# Load environment variables from .env if it exists
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -f "$SCRIPT_DIR/../.env" ]; then
+    set -a
+    source "$SCRIPT_DIR/../.env"
+    set +a
+fi
+
 # Configuration
 DB_HOST="${DB_HOST:-localhost}"
 DB_PORT="${DB_PORT:-5432}"
@@ -67,9 +75,6 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Get the directory of this script
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
 # Build psql command
 PSQL_CMD="psql -h $DB_HOST -p $DB_PORT -U $DB_USER"
 
@@ -122,6 +127,11 @@ info "  ✓ Initial schema applied"
 info "  → 002_default_views.sql"
 $PSQL_CMD -d $DB_NAME -f "$SCRIPT_DIR/schema/002_default_views.sql" > /dev/null
 info "  ✓ Default views applied"
+
+# 003: Add parent_id to tasks
+info "  → 003_add_parent_id_to_tasks.sql"
+$PSQL_CMD -d $DB_NAME -f "$SCRIPT_DIR/schema/003_add_parent_id_to_tasks.sql" > /dev/null
+info "  ✓ Parent ID field added to tasks"
 
 info "✓ All migrations applied"
 

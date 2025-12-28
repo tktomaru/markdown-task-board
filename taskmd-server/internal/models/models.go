@@ -11,6 +11,7 @@ import (
 type Task struct {
 	ID           string         `json:"id" db:"id"`
 	ProjectID    string         `json:"project_id" db:"project_id"`
+	ParentID     *string        `json:"parent_id,omitempty" db:"parent_id"`
 	Title        string         `json:"title" db:"title"`
 	Status       TaskStatus     `json:"status" db:"status"`
 	Priority     TaskPriority   `json:"priority" db:"priority"`

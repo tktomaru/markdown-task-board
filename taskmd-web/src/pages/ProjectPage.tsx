@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getProject, getTasks, tasksApi } from '@/lib/api'
+import { type Task } from '@/types'
 import CreateTaskModal from '@/components/CreateTaskModal'
 import TaskPackModal from '@/components/TaskPackModal'
 import BulkEditModal, { type BulkUpdateData } from '@/components/BulkEditModal'
@@ -92,6 +93,43 @@ export default function ProjectPage() {
   const selectedTasks = tasks?.filter(t => selectedTaskIds.has(t.id)) || []
 
   const toastMessage = copyToastMessage || packToastMessage
+
+  // Build hierarchical task structure
+  const buildTaskHierarchy = (tasks: Task[]) => {
+    const rootTasks: Task[] = []
+    const childrenMap = new Map<string, Task[]>()
+
+    // Group tasks by parent
+    tasks.forEach(task => {
+      if (!task.parent_id) {
+        rootTasks.push(task)
+      } else {
+        if (!childrenMap.has(task.parent_id)) {
+          childrenMap.set(task.parent_id, [])
+        }
+        childrenMap.get(task.parent_id)!.push(task)
+      }
+    })
+
+    // Flatten hierarchy with depth information
+    const flattenWithDepth = (task: Task, depth: number = 0): Array<{ task: Task; depth: number }> => {
+      const result: Array<{ task: Task; depth: number }> = [{ task, depth }]
+      const children = childrenMap.get(task.id) || []
+      children.forEach(child => {
+        result.push(...flattenWithDepth(child, depth + 1))
+      })
+      return result
+    }
+
+    const hierarchicalTasks: Array<{ task: Task; depth: number }> = []
+    rootTasks.forEach(task => {
+      hierarchicalTasks.push(...flattenWithDepth(task))
+    })
+
+    return hierarchicalTasks
+  }
+
+  const hierarchicalTasks = tasks ? buildTaskHierarchy(tasks) : []
 
   if (projectLoading) {
     return (
@@ -409,17 +447,19 @@ export default function ProjectPage() {
                 </span>
               </div>
 
-              {tasks.map((task) => (
+              {hierarchicalTasks.map(({ task, depth }) => (
                 <div
                   key={task.id}
                   style={{
                     padding: '1rem 1.5rem',
+                    paddingLeft: `${1.5 + depth * 2}rem`,
                     borderBottom: '1px solid var(--color-border)',
                     display: 'flex',
                     alignItems: 'flex-start',
                     gap: '1rem',
                     backgroundColor: selectedTaskIds.has(task.id) ? 'var(--color-bg-tertiary)' : 'transparent',
                     transition: 'background-color 0.2s ease',
+                    borderLeft: depth > 0 ? `3px solid var(--color-primary)` : 'none',
                   }}
                 >
                   <input
@@ -442,7 +482,10 @@ export default function ProjectPage() {
                       cursor: 'pointer',
                     }}
                   >
-                    <h3 style={{ marginBottom: '0.5rem' }}>{task.title}</h3>
+                    <h3 style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      {depth > 0 && <span style={{ opacity: 0.5, fontSize: '0.875rem' }}>└─</span>}
+                      {task.title}
+                    </h3>
                     {(task.extra_meta as any)?.summary && (
                       <p style={{
                         fontSize: '0.875rem',

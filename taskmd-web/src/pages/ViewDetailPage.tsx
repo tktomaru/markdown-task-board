@@ -9,6 +9,7 @@ import { useCopyTasks } from '@/hooks/useCopyTasks'
 import { useTaskPack } from '@/hooks/useTaskPack'
 import { priorityLabels, statusLabels } from '@/lib/labels'
 import { debug } from '@/lib/debug'
+import type { Task } from '@/types'
 
 export default function ViewDetailPage() {
   const { projectId, viewId } = useParams<{ projectId: string; viewId: string }>()
@@ -73,6 +74,43 @@ export default function ViewDetailPage() {
   } = useTaskPack()
 
   const toastMessage = copyToastMessage || packToastMessage
+
+  // Build hierarchical task structure
+  const buildTaskHierarchy = (tasks: Task[]) => {
+    const rootTasks: Task[] = []
+    const childrenMap = new Map<string, Task[]>()
+
+    // Group tasks by parent
+    tasks.forEach(task => {
+      if (!task.parent_id) {
+        rootTasks.push(task)
+      } else {
+        if (!childrenMap.has(task.parent_id)) {
+          childrenMap.set(task.parent_id, [])
+        }
+        childrenMap.get(task.parent_id)!.push(task)
+      }
+    })
+
+    // Flatten hierarchy with depth information
+    const flattenWithDepth = (task: Task, depth: number = 0): Array<{ task: Task; depth: number }> => {
+      const result: Array<{ task: Task; depth: number }> = [{ task, depth }]
+      const children = childrenMap.get(task.id) || []
+      children.forEach(child => {
+        result.push(...flattenWithDepth(child, depth + 1))
+      })
+      return result
+    }
+
+    const hierarchicalTasks: Array<{ task: Task; depth: number }> = []
+    rootTasks.forEach(task => {
+      hierarchicalTasks.push(...flattenWithDepth(task))
+    })
+
+    return hierarchicalTasks
+  }
+
+  const hierarchicalTasks = tasks ? buildTaskHierarchy(tasks) : []
 
   if (viewLoading) {
     return (
@@ -364,15 +402,17 @@ export default function ViewDetailPage() {
             border: '1px solid var(--color-border)',
             overflow: 'hidden',
           }}>
-            {tasks.map((task) => (
+            {hierarchicalTasks.map(({ task, depth }) => (
               <div
                 key={task.id}
                 onClick={() => navigate(`/projects/${projectId}/tasks/${task.id}`)}
                 style={{
                   padding: '1rem 1.5rem',
+                  paddingLeft: `${1.5 + depth * 2}rem`,
                   borderBottom: '1px solid var(--color-border)',
                   cursor: 'pointer',
                   transition: 'background-color 0.2s ease',
+                  borderLeft: depth > 0 ? `3px solid var(--color-primary)` : 'none',
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)'
@@ -381,7 +421,10 @@ export default function ViewDetailPage() {
                   e.currentTarget.style.backgroundColor = 'transparent'
                 }}
               >
-                <h3 style={{ marginBottom: '0.5rem' }}>{task.title}</h3>
+                <h3 style={{ marginBottom: '0.5rem' }}>
+                  {depth > 0 && <span style={{ color: 'var(--color-text-tertiary)', marginRight: '0.5rem' }}>└</span>}
+                  {task.title}
+                </h3>
                 {(task.extra_meta as any)?.summary && (
                   <p style={{
                     fontSize: '0.875rem',

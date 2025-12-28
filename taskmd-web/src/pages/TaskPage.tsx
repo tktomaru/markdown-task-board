@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getTask, updateTask } from '@/lib/api'
+import { getTask, updateTask, getTasks } from '@/lib/api'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeRaw from 'rehype-raw'
@@ -33,6 +33,12 @@ export default function TaskPage() {
     queryKey: ['task', projectId, taskId],
     queryFn: () => getTask(projectId!, taskId!),
     enabled: !!projectId && !!taskId,
+  })
+
+  const { data: allTasks } = useQuery({
+    queryKey: ['tasks', projectId],
+    queryFn: () => getTasks(projectId!),
+    enabled: !!projectId,
   })
 
   // Update local summary state when task is loaded
@@ -145,6 +151,39 @@ export default function TaskPage() {
     // Update assignees array
     const assigneesStr = `[${newAssignees.map(a => `"${a}"`).join(', ')}]`
     const updatedYaml = yamlContent.replace(/assignees:\s*\[[^\]]*\]/, `assignees: ${assigneesStr}`)
+
+    const updatedMarkdown = before + updatedYaml + after
+    updateTaskMutation.mutate({ markdown_body: updatedMarkdown })
+  }
+
+  const handleParentIdChange = (newParentId: string) => {
+    if (!task) return
+
+    const yamlMatch = task.markdown_body.match(/([\s\S]*?```yaml\n)([\s\S]*?)(\n```[\s\S]*)/)
+    if (!yamlMatch) return
+
+    const [, before, yamlContent, after] = yamlMatch
+    let updatedYaml = yamlContent
+
+    // Check if parent_id already exists in YAML
+    const parentIdRegex = /parent_id:\s*\S*/m
+    const hasParentId = parentIdRegex.test(yamlContent)
+
+    if (newParentId === '') {
+      // Remove parent_id if empty value selected
+      if (hasParentId) {
+        updatedYaml = yamlContent.replace(/parent_id:\s*\S*\n?/m, '')
+      }
+    } else {
+      // Add or update parent_id
+      if (hasParentId) {
+        // Update existing parent_id
+        updatedYaml = yamlContent.replace(parentIdRegex, `parent_id: ${newParentId}`)
+      } else {
+        // Add parent_id after id field
+        updatedYaml = yamlContent.replace(/(id:\s*\S+)/, `$1\nparent_id: ${newParentId}`)
+      }
+    }
 
     const updatedMarkdown = before + updatedYaml + after
     updateTaskMutation.mutate({ markdown_body: updatedMarkdown })
@@ -296,6 +335,35 @@ export default function TaskPage() {
               <option value="P2" style={{ backgroundColor: priorityColors.P2 }}>P2 - 計画内重要</option>
               <option value="P3" style={{ backgroundColor: priorityColors.P3 }}>P3 - 余裕があれば</option>
               <option value="P4" style={{ backgroundColor: priorityColors.P4 }}>P4 - いつか</option>
+            </select>
+          </div>
+          <div>
+            <label style={{ color: 'var(--color-text-tertiary)', marginRight: '0.5rem' }}>
+              親タスク:
+            </label>
+            <select
+              value={task.parent_id || ''}
+              onChange={(e) => handleParentIdChange(e.target.value)}
+              disabled={updateTaskMutation.isPending}
+              style={{
+                padding: '0.25rem 0.5rem',
+                borderRadius: '4px',
+                border: '1px solid var(--color-border)',
+                backgroundColor: 'var(--color-bg-secondary)',
+                color: 'var(--color-text)',
+                fontWeight: '500',
+                cursor: updateTaskMutation.isPending ? 'not-allowed' : 'pointer',
+                fontSize: '0.875rem',
+              }}
+            >
+              <option value="">なし</option>
+              {allTasks
+                ?.filter(t => t.id !== task.id) // 自分自身は除外
+                .map(t => (
+                  <option key={t.id} value={t.id}>
+                    {t.id}: {t.title}
+                  </option>
+                ))}
             </select>
           </div>
         </div>

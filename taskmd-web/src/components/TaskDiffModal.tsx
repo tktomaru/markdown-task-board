@@ -16,6 +16,12 @@ interface DiffResult {
   unchanged: Task[]
 }
 
+interface TaskNode {
+  task: Task
+  children: TaskNode[]
+  depth: number
+}
+
 export default function TaskDiffModal({
   isOpen,
   onClose,
@@ -32,6 +38,46 @@ export default function TaskDiffModal({
   const showToast = (message: string) => {
     setToastMessage(message)
     setTimeout(() => setToastMessage(''), 3000)
+  }
+
+  // Build hierarchical structure from flat task list
+  const buildTaskTree = (tasks: Task[]): TaskNode[] => {
+    const taskMap = new Map<string, TaskNode>()
+    const rootNodes: TaskNode[] = []
+
+    // Create nodes for all tasks
+    tasks.forEach(task => {
+      taskMap.set(task.id, { task, children: [], depth: 0 })
+    })
+
+    // Build tree structure
+    tasks.forEach(task => {
+      const node = taskMap.get(task.id)!
+      if (task.parent_id && taskMap.has(task.parent_id)) {
+        // This is a child task
+        const parentNode = taskMap.get(task.parent_id)!
+        node.depth = parentNode.depth + 1
+        parentNode.children.push(node)
+      } else {
+        // This is a root task
+        rootNodes.push(node)
+      }
+    })
+
+    return rootNodes
+  }
+
+  // Flatten tree to list with depth information
+  const flattenTaskTree = (nodes: TaskNode[]): TaskNode[] => {
+    const result: TaskNode[] = []
+
+    const traverse = (node: TaskNode) => {
+      result.push(node)
+      node.children.forEach(child => traverse(child))
+    }
+
+    nodes.forEach(node => traverse(node))
+    return result
   }
 
   const getLineBreakChar = () => {
@@ -104,11 +150,14 @@ export default function TaskDiffModal({
     reader.readAsText(file)
   }
 
-  const formatTaskAsHtml = (task: Task, color?: string, lineBreakChar?: string, baselineTask?: Task) => {
+  const formatTaskAsHtml = (task: Task, depth: number = 0, color?: string, lineBreakChar?: string, baselineTask?: Task) => {
     const summary = (task.extra_meta as any)?.summary || ''
     const status = statusLabels[task.status] || task.status
     const lb = lineBreakChar || '\n'
     const isMarker = lb === '[[MARKMD-BR]]'
+
+    // Indentation for hierarchy (use full-width spaces)
+    const indent = '　'.repeat(depth)
 
     // Helper to wrap text in color if changed
     const colorize = (text: string, hasChanged: boolean) => {
@@ -186,14 +235,14 @@ export default function TaskDiffModal({
 
     // For marker mode, use inline text without div tags
     if (isMarker) {
-      const mainText = `・${titlePart} ${statusPart}${dateRange}${assignees}`
-      const summaryText = summaryPart ? `　⇒${summaryPart}` : ''
+      const mainText = `${indent}・${titlePart} ${statusPart}${dateRange}${assignees}`
+      const summaryText = summaryPart ? `${indent}　⇒${summaryPart}` : ''
       return mainText + (summaryText ? lb + summaryText : '')
     }
 
     // For normal modes, use div tags
-    const mainLine = `<div>・${titlePart} ${statusPart}${dateRange}${assignees}</div>`
-    const summaryLine = summaryPart ? `<div style="margin-left: 1em;">⇒${summaryPart}</div>` : ''
+    const mainLine = `<div>${indent}・${titlePart} ${statusPart}${dateRange}${assignees}</div>`
+    const summaryLine = summaryPart ? `<div>${indent}　⇒${summaryPart}</div>` : ''
 
     return mainLine + (summaryLine ? lb + summaryLine : '')
   }
@@ -214,28 +263,32 @@ export default function TaskDiffModal({
 
     const htmlParts: string[] = []
 
-    // Process tasks in current order
-    currentTasks.forEach(task => {
+    // Build hierarchical structure and flatten with depth
+    const tree = buildTaskTree(currentTasks)
+    const flattenedTasks = flattenTaskTree(tree)
+
+    // Process tasks in hierarchical order
+    flattenedTasks.forEach(({ task, depth }) => {
       const isAdded = diffResult.added.some(t => t.id === task.id)
       const isModified = diffResult.modified.some(t => t.id === task.id)
 
       if (isAdded) {
         // Added task - full highlight
-        htmlParts.push(formatTaskAsHtml(task, highlightColor, lb))
+        htmlParts.push(formatTaskAsHtml(task, depth, highlightColor, lb))
       } else if (isModified) {
         // Modified task - highlight only changed fields
         const baselineTask = baselineTasks.find(t => t.id === task.id)
-        htmlParts.push(formatTaskAsHtml(task, highlightColor, lb, baselineTask))
+        htmlParts.push(formatTaskAsHtml(task, depth, highlightColor, lb, baselineTask))
       } else {
         // Unchanged task - normal display
-        htmlParts.push(formatTaskAsHtml(task, undefined, lb))
+        htmlParts.push(formatTaskAsHtml(task, depth, undefined, lb))
       }
     })
 
     // Add removed tasks at the end with strikethrough
     if (diffResult.removed.length > 0) {
       diffResult.removed.forEach(task => {
-        const taskHtml = formatTaskAsHtml(task, '#999', lb)
+        const taskHtml = formatTaskAsHtml(task, 0, '#999', lb)
         const styledHtml = isMarker
           ? `<span style="text-decoration: line-through;">${taskHtml}</span>`
           : taskHtml.replace('<div', '<div style="text-decoration: line-through;"')
@@ -534,31 +587,36 @@ export default function TaskDiffModal({
               }}>
                 <div style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>■{projectName}</div>
 
-                {currentTasks.map((task, idx) => {
-                  const isAdded = diffResult.added.some(t => t.id === task.id)
-                  const isModified = diffResult.modified.some(t => t.id === task.id)
+                {(() => {
+                  const tree = buildTaskTree(currentTasks)
+                  const flattenedTasks = flattenTaskTree(tree)
 
-                  if (isAdded) {
-                    // Added task - full highlight
-                    return (
-                      <div key={`task-${idx}`} dangerouslySetInnerHTML={{ __html: formatTaskAsHtml(task, highlightColor, '\n') }} />
-                    )
-                  } else if (isModified) {
-                    // Modified task - highlight only changed fields
-                    const baselineTask = baselineTasks.find(t => t.id === task.id)
-                    return (
-                      <div key={`task-${idx}`} dangerouslySetInnerHTML={{ __html: formatTaskAsHtml(task, highlightColor, '\n', baselineTask) }} />
-                    )
-                  } else {
-                    // Unchanged task - normal display
-                    return (
-                      <div key={`task-${idx}`} dangerouslySetInnerHTML={{ __html: formatTaskAsHtml(task, undefined, '\n') }} />
-                    )
-                  }
-                })}
+                  return flattenedTasks.map(({ task, depth }, idx) => {
+                    const isAdded = diffResult.added.some(t => t.id === task.id)
+                    const isModified = diffResult.modified.some(t => t.id === task.id)
+
+                    if (isAdded) {
+                      // Added task - full highlight
+                      return (
+                        <div key={`task-${idx}`} dangerouslySetInnerHTML={{ __html: formatTaskAsHtml(task, depth, highlightColor, '\n') }} />
+                      )
+                    } else if (isModified) {
+                      // Modified task - highlight only changed fields
+                      const baselineTask = baselineTasks.find(t => t.id === task.id)
+                      return (
+                        <div key={`task-${idx}`} dangerouslySetInnerHTML={{ __html: formatTaskAsHtml(task, depth, highlightColor, '\n', baselineTask) }} />
+                      )
+                    } else {
+                      // Unchanged task - normal display
+                      return (
+                        <div key={`task-${idx}`} dangerouslySetInnerHTML={{ __html: formatTaskAsHtml(task, depth, undefined, '\n') }} />
+                      )
+                    }
+                  })
+                })()}
 
                 {diffResult.removed.length > 0 && diffResult.removed.map((task, idx) => (
-                  <div key={`removed-${idx}`} style={{ textDecoration: 'line-through' }} dangerouslySetInnerHTML={{ __html: formatTaskAsHtml(task, '#999', '\n') }} />
+                  <div key={`removed-${idx}`} style={{ textDecoration: 'line-through' }} dangerouslySetInnerHTML={{ __html: formatTaskAsHtml(task, 0, '#999', '\n') }} />
                 ))}
               </div>
             </div>
