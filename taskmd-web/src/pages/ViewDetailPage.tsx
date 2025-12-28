@@ -2,6 +2,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { savedViewsApi } from '@/lib/api'
 import TaskPackModal from '@/components/TaskPackModal'
+import DueDateBadge from '@/components/DueDateBadge'
 import { useCopyTasks } from '@/hooks/useCopyTasks'
 import { useTaskPack } from '@/hooks/useTaskPack'
 import { priorityLabels, statusLabels } from '@/lib/labels'
@@ -364,15 +365,14 @@ export default function ViewDetailPage() {
                   fontSize: '0.875rem',
                   color: 'var(--color-text-secondary)',
                   flexWrap: 'wrap',
+                  alignItems: 'center',
                 }}>
                   <span>ステータス: {statusLabels[task.status] || task.status}</span>
                   <span>優先度: {priorityLabels[task.priority] || task.priority}</span>
                   {task.start_date && (
                     <span>開始: {new Date(task.start_date).toLocaleDateString('ja-JP')}</span>
                   )}
-                  {task.due_date && (
-                    <span>期限: {new Date(task.due_date).toLocaleDateString('ja-JP')}</span>
-                  )}
+                  <DueDateBadge dueDate={task.due_date} showDate={true} />
                   {task.assignees && task.assignees.length > 0 && (
                     <span>担当: {task.assignees.join(', ')}</span>
                   )}
