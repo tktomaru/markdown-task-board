@@ -248,18 +248,15 @@ export default function CreateViewModal({ isOpen, onClose, projectId, view }: Cr
       })
     })
 
-    // Validate that query is not empty
-    if (!rawQuery || rawQuery.trim() === '') {
-      alert('少なくとも1つのフィルター条件を設定してください')
-      return
-    }
+    // Allow empty query to show all tasks
+    const finalQuery = rawQuery && rawQuery.trim() !== '' ? rawQuery : ''
 
     const data: Partial<SavedView> = {
       name,
       description: description || undefined,
       scope,
-      raw_query: rawQuery,
-      normalized_query: rawQuery, // Same as raw for now
+      raw_query: finalQuery,
+      normalized_query: finalQuery, // Same as raw for now
       presentation: {},
     }
 
