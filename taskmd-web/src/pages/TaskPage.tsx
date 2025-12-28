@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getTask, updateTask } from '@/lib/api'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import rehypeRaw from 'rehype-raw'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import EditTaskModal from '@/components/EditTaskModal'
@@ -140,6 +141,17 @@ export default function TaskPage() {
     } catch (err) {
       console.error('Failed to copy:', err)
     }
+  }
+
+  // Convert {{collapse}} syntax to HTML details/summary tags
+  const processCollapseBlocks = (markdown: string): string => {
+    // Pattern: {{collapse(optional title)\ncontent\n}}
+    const collapsePattern = /\{\{collapse(\([^)]+\))?\n([\s\S]*?)\n\}\}/g
+
+    return markdown.replace(collapsePattern, (_match, titleGroup, content) => {
+      const title = titleGroup ? titleGroup.slice(1, -1) : '詳細を表示'
+      return `<details>\n<summary>${title}</summary>\n\n${content}\n\n</details>`
+    })
   }
 
   if (isLoading) {
@@ -403,7 +415,30 @@ export default function TaskPage() {
         >
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
+            rehypePlugins={[rehypeRaw]}
             components={{
+              details: ({ children }) => (
+                <details style={{
+                  marginBottom: '1rem',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: '4px',
+                  padding: '0.5rem',
+                }}>
+                  {children}
+                </details>
+              ),
+              summary: ({ children }) => (
+                <summary style={{
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                  padding: '0.5rem',
+                  userSelect: 'none',
+                  listStyle: 'none',
+                  outline: 'none',
+                }}>
+                  {children}
+                </summary>
+              ),
               code({ className, children, ...props }) {
                 const match = /language-(\w+)/.exec(className || '')
                 const isInline = !match
@@ -473,7 +508,7 @@ export default function TaskPage() {
               ),
             }}
           >
-            {task.markdown_body}
+            {processCollapseBlocks(task.markdown_body)}
           </ReactMarkdown>
         </div>
       </div>

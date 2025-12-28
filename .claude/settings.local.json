@@ -10,7 +10,8 @@
       "Bash(go build:*)",
       "Bash(sudo docker compose logs:*)",
       "Bash(docker compose logs:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(npm install:*)"
     ]
   }
 }
