@@ -15,14 +15,16 @@ type ViewService struct {
 	repo       *repository.ViewRepository
 	parser     *query.QueryParser
 	sqlBuilder *query.SQLBuilder
+	debug      bool
 }
 
 // NewViewService creates a new view service
-func NewViewService(repo *repository.ViewRepository) *ViewService {
+func NewViewService(repo *repository.ViewRepository, debug bool) *ViewService {
 	return &ViewService{
 		repo:       repo,
 		parser:     query.NewQueryParser(),
 		sqlBuilder: query.NewSQLBuilder(),
+		debug:      debug,
 	}
 }
 
@@ -175,10 +177,25 @@ func (s *ViewService) Execute(ctx context.Context, projectID, viewID string) ([]
 		return nil, err
 	}
 
+	if s.debug {
+		fmt.Printf("[DEBUG] View Execution Start\n")
+		fmt.Printf("[DEBUG]   Project ID: %s\n", projectID)
+		fmt.Printf("[DEBUG]   View ID: %s\n", viewID)
+		fmt.Printf("[DEBUG]   View Name: %s\n", view.Name)
+		fmt.Printf("[DEBUG]   Raw Query: %s\n", view.RawQuery)
+	}
+
 	// Parse query
 	parsed, err := s.parser.Parse(view.RawQuery)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse query: %w", err)
+	}
+
+	if s.debug {
+		fmt.Printf("[DEBUG] Parsed Query:\n")
+		fmt.Printf("[DEBUG]   Filters: %+v\n", parsed.Filters)
+		fmt.Printf("[DEBUG]   Sort: %+v\n", parsed.Sort)
+		fmt.Printf("[DEBUG]   Limit: %d\n", parsed.Limit)
 	}
 
 	// Build SQL
@@ -187,10 +204,33 @@ func (s *ViewService) Execute(ctx context.Context, projectID, viewID string) ([]
 		return nil, fmt.Errorf("failed to build SQL: %w", err)
 	}
 
+	if s.debug {
+		fmt.Printf("[DEBUG] Generated SQL:\n")
+		fmt.Printf("[DEBUG]   SQL: %s\n", buildResult.SQL)
+		fmt.Printf("[DEBUG]   Args: %+v\n", buildResult.Args)
+		fmt.Printf("[DEBUG]   Args Types: ")
+		for i, arg := range buildResult.Args {
+			fmt.Printf("%d=%T ", i, arg)
+		}
+		fmt.Printf("\n")
+	}
+
 	// Execute query
 	tasks, err := s.repo.ExecuteQuery(ctx, buildResult.SQL, buildResult.Args)
 	if err != nil {
-		return nil, err
+		if s.debug {
+			fmt.Printf("[DEBUG] Query Execution Failed: %v\n", err)
+		}
+		return nil, fmt.Errorf("failed to execute query: %w", err)
+	}
+
+	if s.debug {
+		fmt.Printf("[DEBUG] Query Execution Success\n")
+		fmt.Printf("[DEBUG]   Result Count: %d tasks\n", len(tasks))
+		if len(tasks) > 0 {
+			fmt.Printf("[DEBUG]   Sample Task: ID=%s, Title=%s, Status=%s, Priority=%s\n",
+				tasks[0].ID, tasks[0].Title, tasks[0].Status, tasks[0].Priority)
+		}
 	}
 
 	// Increment use count (async)

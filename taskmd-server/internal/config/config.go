@@ -55,6 +55,7 @@ type AuthConfig struct {
 type LoggingConfig struct {
 	Level  string
 	Format string // "json" or "text"
+	Debug  bool   // Enable debug logging
 }
 
 // Load loads configuration from environment variables
@@ -93,6 +94,7 @@ func Load() (*Config, error) {
 		Logging: LoggingConfig{
 			Level:  getEnv("LOG_LEVEL", "info"),
 			Format: getEnv("LOG_FORMAT", "json"),
+			Debug:  getEnv("DEBUG", "false") == "true",
 		},
 	}
 

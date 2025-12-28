@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { savedViewsApi } from '@/lib/api'
 import type { SavedView } from '@/types'
+import { debug } from '@/lib/debug'
 
 interface CreateViewModalProps {
   isOpen: boolean
@@ -229,8 +230,23 @@ export default function CreateViewModal({ isOpen, onClose, projectId, view }: Cr
     e.preventDefault()
 
     const rawQuery = buildQueryFromFilters(filters)
-    console.log('Generated query from filters:', rawQuery)
-    console.log('Filters:', filters)
+
+    debug.group('View Save/Update', () => {
+      debug.log('Action:', view ? 'Update' : 'Create')
+      debug.log('View Name:', name)
+      debug.log('Filters Object:', filters)
+      debug.log('Generated Query:', rawQuery)
+      debug.log('Filter Breakdown:', {
+        status: filters.status,
+        priority: filters.priority,
+        assignees: filters.assignees,
+        labels: filters.labels,
+        startDateFrom: filters.startDateFrom,
+        startDateTo: filters.startDateTo,
+        dueDateFrom: filters.dueDateFrom,
+        dueDateTo: filters.dueDateTo,
+      })
+    })
 
     // Validate that query is not empty
     if (!rawQuery || rawQuery.trim() === '') {
@@ -247,11 +263,11 @@ export default function CreateViewModal({ isOpen, onClose, projectId, view }: Cr
       presentation: {},
     }
 
+    debug.log('View Data to Save:', data)
+
     if (view) {
-      console.log('Updating view with data:', data)
       updateViewMutation.mutate(data)
     } else {
-      console.log('Creating view with data:', data)
       createViewMutation.mutate(data)
     }
   }

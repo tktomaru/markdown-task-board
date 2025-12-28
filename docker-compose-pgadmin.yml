@@ -1,0 +1,14 @@
+services:
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: tk.tomaru@gmail.com
+      PGADMIN_DEFAULT_PASSWORD: Hz4qdvbdP7brAADNYKGHbyjKwxVttszhfgeW
+      PGADMIN_LISTEN_PORT: "80"
+    volumes:
+      - ./pgadmin/data:/var/lib/pgadmin
+    ports:
+      # ブラウザは http://localhost:31019 でアクセスできる
+      - "31019:80"
+

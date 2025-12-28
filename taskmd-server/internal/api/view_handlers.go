@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -15,7 +16,7 @@ func (s *Server) handleListViews(c *gin.Context) {
 	// TODO: Get user ID from authentication context
 	userID := "system"
 
-	viewService := service.NewViewService(repository.NewViewRepository(s.db.DB))
+	viewService := service.NewViewService(repository.NewViewRepository(s.db.DB), s.cfg.Logging.Debug)
 	views, err := viewService.List(c.Request.Context(), projectID, &userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -47,7 +48,16 @@ func (s *Server) handleCreateView(c *gin.Context) {
 	// TODO: Get user ID from authentication context
 	req.OwnerUserID = "system"
 
-	viewService := service.NewViewService(repository.NewViewRepository(s.db.DB))
+	if s.cfg.Logging.Debug {
+		fmt.Printf("[DEBUG] handleCreateView called\n")
+		fmt.Printf("[DEBUG]   Project ID: %s\n", projectID)
+		fmt.Printf("[DEBUG]   View ID: %s\n", req.ID)
+		fmt.Printf("[DEBUG]   Name: %s\n", req.Name)
+		fmt.Printf("[DEBUG]   Scope: %s\n", req.Scope)
+		fmt.Printf("[DEBUG]   Raw Query: %s\n", req.RawQuery)
+	}
+
+	viewService := service.NewViewService(repository.NewViewRepository(s.db.DB), s.cfg.Logging.Debug)
 	view, err := viewService.Create(c.Request.Context(), projectID, &req)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -68,7 +78,7 @@ func (s *Server) handleGetView(c *gin.Context) {
 	projectID := c.Param("projectId")
 	viewID := c.Param("viewId")
 
-	viewService := service.NewViewService(repository.NewViewRepository(s.db.DB))
+	viewService := service.NewViewService(repository.NewViewRepository(s.db.DB), s.cfg.Logging.Debug)
 	view, err := viewService.GetByID(c.Request.Context(), projectID, viewID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
@@ -98,7 +108,16 @@ func (s *Server) handleUpdateView(c *gin.Context) {
 		return
 	}
 
-	viewService := service.NewViewService(repository.NewViewRepository(s.db.DB))
+	if s.cfg.Logging.Debug {
+		fmt.Printf("[DEBUG] handleUpdateView called\n")
+		fmt.Printf("[DEBUG]   Project ID: %s\n", projectID)
+		fmt.Printf("[DEBUG]   View ID: %s\n", viewID)
+		fmt.Printf("[DEBUG]   Name: %s\n", req.Name)
+		fmt.Printf("[DEBUG]   Scope: %s\n", req.Scope)
+		fmt.Printf("[DEBUG]   Raw Query: %s\n", req.RawQuery)
+	}
+
+	viewService := service.NewViewService(repository.NewViewRepository(s.db.DB), s.cfg.Logging.Debug)
 	view, err := viewService.Update(c.Request.Context(), projectID, viewID, &req)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -119,7 +138,7 @@ func (s *Server) handleDeleteView(c *gin.Context) {
 	projectID := c.Param("projectId")
 	viewID := c.Param("viewId")
 
-	viewService := service.NewViewService(repository.NewViewRepository(s.db.DB))
+	viewService := service.NewViewService(repository.NewViewRepository(s.db.DB), s.cfg.Logging.Debug)
 	err := viewService.Delete(c.Request.Context(), projectID, viewID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
@@ -137,7 +156,15 @@ func (s *Server) handleExecuteView(c *gin.Context) {
 	projectID := c.Param("projectId")
 	viewID := c.Param("viewId")
 
-	viewService := service.NewViewService(repository.NewViewRepository(s.db.DB))
+	if s.cfg.Logging.Debug {
+		fmt.Printf("[DEBUG] handleExecuteView called\n")
+		fmt.Printf("[DEBUG]   Project ID: %s\n", projectID)
+		fmt.Printf("[DEBUG]   View ID: %s\n", viewID)
+		fmt.Printf("[DEBUG]   Method: %s\n", c.Request.Method)
+		fmt.Printf("[DEBUG]   Path: %s\n", c.Request.URL.Path)
+	}
+
+	viewService := service.NewViewService(repository.NewViewRepository(s.db.DB), s.cfg.Logging.Debug)
 	tasks, err := viewService.Execute(c.Request.Context(), projectID, viewID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{

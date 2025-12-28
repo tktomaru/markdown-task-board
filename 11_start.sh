@@ -64,9 +64,16 @@ fi
 # サービスの起動
 echo "4. サービスをビルド・起動中..."
 sudo docker compose build --progress=plain
-sudo docker compose up -d --force-recreate --remove-orphans 
+sudo docker compose up -d --force-recreate
 echo "   ✓ すべてのサービスをビルド・起動しました"
 echo ""
+
+#########
+# sudo rm -rf ./pgadmin/data
+# sudo mkdir -p ./pgadmin/data
+# sudo chmod 777 -R ./pgadmin/data
+# sudo docker compose -f docker-compose-pgadmin.yml --progress=plain build
+# sudo docker compose -f docker-compose-pgadmin.yml up  -d --force-recreate
 
 # 起動待ち
 echo "5. サービスの起動を待機中..."

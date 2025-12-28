@@ -5,6 +5,7 @@ import TaskPackModal from '@/components/TaskPackModal'
 import { useCopyTasks } from '@/hooks/useCopyTasks'
 import { useTaskPack } from '@/hooks/useTaskPack'
 import { priorityLabels, statusLabels } from '@/lib/labels'
+import { debug } from '@/lib/debug'
 
 export default function ViewDetailPage() {
   const { projectId, viewId } = useParams<{ projectId: string; viewId: string }>()
@@ -20,16 +21,34 @@ export default function ViewDetailPage() {
     queryKey: ['view-tasks', projectId, viewId],
     queryFn: async () => {
       try {
-        console.log('Executing view:', projectId, viewId)
+        debug.group('View Execution', () => {
+          debug.log('Project ID:', projectId)
+          debug.log('View ID:', viewId)
+          debug.log('View Query:', view?.raw_query)
+          debug.log('View Data:', view)
+        })
+
         const result = await savedViewsApi.execute(projectId!, viewId!)
-        console.log('View execution result:', result)
+
+        debug.group('View Execution Result', () => {
+          debug.log('Task Count:', result?.length || 0)
+          debug.log('Tasks:', result)
+          if (result && result.length > 0) {
+            debug.log('Sample Task:', result[0])
+            debug.table(result.map(t => ({
+              id: t.id,
+              title: t.title,
+              status: t.status,
+              priority: t.priority,
+            })))
+          }
+        })
+
         return result
       } catch (err: any) {
-        console.error('Error executing view:', err)
-        console.error('Error response:', err.response)
-        console.error('Error data:', err.response?.data)
-        console.error('Error status:', err.response?.status)
-        console.error('Error message:', err.message)
+        debug.error('View execution failed:', err)
+        debug.error('Error response:', err.response)
+        debug.error('Error data:', err.response?.data)
         throw err
       }
     },
