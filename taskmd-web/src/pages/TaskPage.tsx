@@ -1,16 +1,36 @@
+import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { getTask } from '@/lib/api'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import EditTaskModal from '@/components/EditTaskModal'
 
 export default function TaskPage() {
   const { projectId, taskId } = useParams<{ projectId: string; taskId: string }>()
   const navigate = useNavigate()
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [copySuccess, setCopySuccess] = useState(false)
 
   const { data: task, isLoading, error } = useQuery({
     queryKey: ['task', projectId, taskId],
     queryFn: () => getTask(projectId!, taskId!),
     enabled: !!projectId && !!taskId,
   })
+
+  const handleCopyMarkdown = async () => {
+    if (!task) return
+
+    try {
+      await navigator.clipboard.writeText(task.markdown_body)
+      setCopySuccess(true)
+      setTimeout(() => setCopySuccess(false), 2000)
+    } catch (err) {
+      console.error('Failed to copy:', err)
+    }
+  }
 
   if (isLoading) {
     return (
@@ -205,22 +225,118 @@ export default function TaskPage() {
         border: '1px solid var(--color-border)',
         marginBottom: '2rem',
       }}>
-        <h2 style={{ marginBottom: '1rem' }}>詳細</h2>
         <div style={{
-          whiteSpace: 'pre-wrap',
-          wordBreak: 'break-word',
-          lineHeight: '1.6',
-          color: 'var(--color-text)',
-          fontFamily: 'monospace',
-          fontSize: '0.875rem',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '1rem',
         }}>
-          {task.markdown_body}
+          <h2>詳細</h2>
+          <button
+            onClick={handleCopyMarkdown}
+            style={{
+              backgroundColor: copySuccess ? 'var(--color-success)' : 'var(--color-primary)',
+              color: 'white',
+              padding: '0.5rem 1rem',
+              fontSize: '0.875rem',
+              fontWeight: '500',
+              borderRadius: '4px',
+              border: 'none',
+              cursor: 'pointer',
+              transition: 'background-color 0.2s',
+            }}
+          >
+            {copySuccess ? '✓ コピーしました' : '📋 Markdownをコピー'}
+          </button>
+        </div>
+        <div
+          className="markdown-body"
+          style={{
+            lineHeight: '1.6',
+            color: 'var(--color-text)',
+          }}
+        >
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={{
+              code({ className, children, ...props }) {
+                const match = /language-(\w+)/.exec(className || '')
+                const isInline = !match
+                return !isInline && match ? (
+                  <SyntaxHighlighter
+                    style={vscDarkPlus as any}
+                    language={match[1]}
+                    PreTag="div"
+                  >
+                    {String(children).replace(/\n$/, '')}
+                  </SyntaxHighlighter>
+                ) : (
+                  <code className={className} {...props} style={{
+                    backgroundColor: 'rgba(175, 184, 193, 0.2)',
+                    padding: '0.2em 0.4em',
+                    borderRadius: '3px',
+                    fontSize: '85%',
+                  }}>
+                    {children}
+                  </code>
+                )
+              },
+              h1: ({ children }) => <h1 style={{ marginTop: '1.5rem', marginBottom: '0.75rem' }}>{children}</h1>,
+              h2: ({ children }) => <h2 style={{ marginTop: '1.5rem', marginBottom: '0.75rem' }}>{children}</h2>,
+              h3: ({ children }) => <h3 style={{ marginTop: '1rem', marginBottom: '0.5rem' }}>{children}</h3>,
+              p: ({ children }) => <p style={{ marginBottom: '1rem' }}>{children}</p>,
+              ul: ({ children }) => <ul style={{ marginBottom: '1rem', paddingLeft: '2rem' }}>{children}</ul>,
+              ol: ({ children }) => <ol style={{ marginBottom: '1rem', paddingLeft: '2rem' }}>{children}</ol>,
+              li: ({ children }) => <li style={{ marginBottom: '0.25rem' }}>{children}</li>,
+              blockquote: ({ children }) => (
+                <blockquote style={{
+                  borderLeft: '4px solid var(--color-primary)',
+                  paddingLeft: '1rem',
+                  marginLeft: 0,
+                  marginBottom: '1rem',
+                  color: 'var(--color-text-secondary)',
+                }}>
+                  {children}
+                </blockquote>
+              ),
+              table: ({ children }) => (
+                <div style={{ overflowX: 'auto', marginBottom: '1rem' }}>
+                  <table style={{
+                    borderCollapse: 'collapse',
+                    width: '100%',
+                  }}>
+                    {children}
+                  </table>
+                </div>
+              ),
+              th: ({ children }) => (
+                <th style={{
+                  border: '1px solid var(--color-border)',
+                  padding: '0.5rem',
+                  backgroundColor: 'var(--color-bg-tertiary)',
+                }}>
+                  {children}
+                </th>
+              ),
+              td: ({ children }) => (
+                <td style={{
+                  border: '1px solid var(--color-border)',
+                  padding: '0.5rem',
+                }}>
+                  {children}
+                </td>
+              ),
+            }}
+          >
+            {task.markdown_body}
+          </ReactMarkdown>
         </div>
       </div>
 
       {/* Action Buttons */}
       <div style={{ display: 'flex', gap: '0.75rem' }}>
         <button
+          onClick={() => setIsEditModalOpen(true)}
           style={{
             backgroundColor: 'var(--color-primary)',
             color: 'white',
@@ -266,6 +382,16 @@ export default function TaskPage() {
           <div>完了日時: {new Date(task.completed_at).toLocaleString('ja-JP')}</div>
         )}
       </div>
+
+      {/* Edit Modal */}
+      {task && (
+        <EditTaskModal
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          projectId={projectId!}
+          task={task}
+        />
+      )}
     </div>
   )
 }
