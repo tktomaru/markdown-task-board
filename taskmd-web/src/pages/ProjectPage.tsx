@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { getProject, getTasks } from '@/lib/api'
@@ -8,6 +8,7 @@ import CreateTaskModal from '@/components/CreateTaskModal'
 export default function ProjectPage() {
   const { projectId } = useParams<{ projectId: string }>()
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const [isCreateTaskModalOpen, setIsCreateTaskModalOpen] = useState(false)
 
   const { data: project, isLoading: projectLoading, error: projectError } = useQuery({
@@ -120,6 +121,7 @@ export default function ProjectPage() {
             {tasks.map((task) => (
               <div
                 key={task.id}
+                onClick={() => navigate(`/projects/${projectId}/tasks/${task.id}`)}
                 style={{
                   padding: '1rem 1.5rem',
                   borderBottom: '1px solid var(--color-border)',
