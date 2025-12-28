@@ -85,6 +85,7 @@ func (s *Server) setupRoutes() {
 				{
 					tasks.GET("", s.handleListTasks)
 					tasks.POST("", s.handleCreateTask)
+					tasks.POST("/bulk-update", s.handleBulkUpdateTasks)
 					tasks.GET("/:taskId", s.handleGetTask)
 					tasks.PUT("/:taskId", s.handleUpdateTask)
 					tasks.DELETE("/:taskId", s.handleDeleteTask)

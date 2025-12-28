@@ -36,6 +36,13 @@ type UpdateTaskRequest struct {
 	UpdatedBy    string `json:"updated_by,omitempty"`
 }
 
+// BulkUpdateRequest represents a request to bulk update tasks
+type BulkUpdateRequest struct {
+	TaskIDs  []string               `json:"task_ids"`
+	Updates  map[string]interface{} `json:"updates"`
+	UpdatedBy string                 `json:"updated_by,omitempty"`
+}
+
 // Create creates a new task from markdown
 func (s *TaskService) Create(ctx context.Context, projectID string, req *CreateTaskRequest) (*models.Task, error) {
 	// Parse markdown
@@ -126,6 +133,63 @@ func (s *TaskService) Update(ctx context.Context, projectID, taskID string, req 
 	}
 
 	return updatedTask, nil
+}
+
+// BulkUpdate updates multiple tasks with the same field changes
+func (s *TaskService) BulkUpdate(ctx context.Context, projectID string, req *BulkUpdateRequest) (int, error) {
+	updatedCount := 0
+
+	for _, taskID := range req.TaskIDs {
+		// Get existing task
+		task, err := s.repo.GetByID(ctx, projectID, taskID)
+		if err != nil {
+			// Skip tasks that don't exist
+			continue
+		}
+
+		// Apply updates
+		if status, ok := req.Updates["status"].(string); ok && status != "" {
+			task.Status = models.TaskStatus(status)
+		}
+		if priority, ok := req.Updates["priority"].(string); ok && priority != "" {
+			task.Priority = models.TaskPriority(priority)
+		}
+		if assignees, ok := req.Updates["assignees"].([]interface{}); ok {
+			task.Assignees = make([]string, len(assignees))
+			for i, a := range assignees {
+				if str, ok := a.(string); ok {
+					task.Assignees[i] = str
+				}
+			}
+		}
+		if labels, ok := req.Updates["labels"].([]interface{}); ok {
+			task.Labels = make([]string, len(labels))
+			for i, l := range labels {
+				if str, ok := l.(string); ok {
+					task.Labels[i] = str
+				}
+			}
+		}
+
+		// Set updated metadata
+		task.UpdatedBy = &req.UpdatedBy
+		now := time.Now()
+		task.UpdatedAt = now
+
+		// Update status-specific timestamps
+		if task.Status == models.TaskStatusDone && task.CompletedAt == nil {
+			task.CompletedAt = &now
+		}
+
+		// Update in repository
+		if err := s.repo.Update(ctx, task); err != nil {
+			continue
+		}
+
+		updatedCount++
+	}
+
+	return updatedCount, nil
 }
 
 // Delete deletes a task

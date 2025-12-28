@@ -198,3 +198,62 @@ func (s *Server) handleDeleteTask(c *gin.Context) {
 
 	c.JSON(http.StatusNoContent, nil)
 }
+
+// handleBulkUpdateTasks handles POST /api/v1/projects/:projectId/tasks/bulk-update
+func (s *Server) handleBulkUpdateTasks(c *gin.Context) {
+	projectID := c.Param("projectId")
+
+	var req service.BulkUpdateRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Printf("ERROR: Failed to bind JSON for bulk update in project %s: %v", projectID, err)
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "invalid_request",
+			"message": "Invalid request body",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	// TODO: Get user ID from authentication context
+	req.UpdatedBy = "system"
+
+	// Bulk update tasks
+	taskService := service.NewTaskService(repository.NewTaskRepository(s.db.DB))
+	updatedCount, err := taskService.BulkUpdate(c.Request.Context(), projectID, &req)
+	if err != nil {
+		log.Printf("ERROR: Failed to bulk update tasks in project %s: %v", projectID, err)
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "validation_error",
+			"message": "Failed to bulk update tasks",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	// Update search index for all updated tasks (async)
+	if s.meili != nil {
+		go func() {
+			searchService := service.NewSearchService(repository.NewTaskRepository(s.db.DB), s.meili)
+			for _, taskID := range req.TaskIDs {
+				task, err := taskService.GetByID(c.Request.Context(), projectID, taskID)
+				if err == nil {
+					_ = searchService.UpdateTaskIndex(c.Request.Context(), task)
+				}
+			}
+		}()
+	}
+
+	// Broadcast WebSocket event for each updated task
+	for _, taskID := range req.TaskIDs {
+		task, err := taskService.GetByID(c.Request.Context(), projectID, taskID)
+		if err == nil {
+			s.wsHub.Broadcast(websocket.EventTaskUpdated, projectID, task.ID, task)
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data": gin.H{
+			"updated_count": updatedCount,
+		},
+	})
+}

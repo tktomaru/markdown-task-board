@@ -149,6 +149,30 @@ export const tasksApi = {
       return handleApiError(error)
     }
   },
+
+  bulkUpdate: async (
+    projectId: string,
+    taskIds: string[],
+    updates: {
+      status?: string
+      priority?: string
+      assignees?: string[]
+      labels?: string[]
+    }
+  ): Promise<{ updated_count: number }> => {
+    try {
+      const response = await api.post<ApiResponse<{ updated_count: number }>>(
+        `/projects/${projectId}/tasks/bulk-update`,
+        {
+          task_ids: taskIds,
+          updates,
+        }
+      )
+      return response.data.data
+    } catch (error) {
+      return handleApiError(error)
+    }
+  },
 }
 
 // SavedViews API
