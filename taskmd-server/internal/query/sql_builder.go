@@ -3,6 +3,8 @@ package query
 import (
 	"fmt"
 	"strings"
+
+	"github.com/lib/pq"
 )
 
 // SQLBuilder builds SQL queries from parsed queries
@@ -120,7 +122,8 @@ func (b *SQLBuilder) buildFilterCondition(filter Filter, argCount *int) (string,
 			if filter.Negate {
 				condition = fmt.Sprintf("NOT (%s && $%d)", dbColumn, *argCount)
 			}
-			args = append(args, values)
+			// Use pq.Array to properly handle PostgreSQL array type
+			args = append(args, pq.Array(values))
 			return condition, args, nil
 		} else {
 			// Multiple values (OR)
@@ -129,7 +132,8 @@ func (b *SQLBuilder) buildFilterCondition(filter Filter, argCount *int) (string,
 			if filter.Negate {
 				condition = fmt.Sprintf("%s != ALL($%d)", dbColumn, *argCount)
 			}
-			args = append(args, values)
+			// Use pq.Array to properly handle PostgreSQL array type
+			args = append(args, pq.Array(values))
 			return condition, args, nil
 		}
 

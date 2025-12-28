@@ -1,29 +1,14 @@
-import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { savedViewsApi } from '@/lib/api'
+import TaskPackModal from '@/components/TaskPackModal'
+import { useCopyTasks } from '@/hooks/useCopyTasks'
+import { useTaskPack } from '@/hooks/useTaskPack'
+import { priorityLabels, statusLabels } from '@/lib/labels'
 
 export default function ViewDetailPage() {
   const { projectId, viewId } = useParams<{ projectId: string; viewId: string }>()
   const navigate = useNavigate()
-  const [toastMessage, setToastMessage] = useState('')
-
-  const priorityLabels: { [key: string]: string } = {
-    P0: '緊急',
-    P1: '今すぐ重要',
-    P2: '計画内重要',
-    P3: '余裕があれば',
-    P4: 'いつか',
-  }
-
-  const statusLabels: { [key: string]: string } = {
-    open: '未着手',
-    in_progress: '進行中',
-    review: 'レビュー待ち',
-    blocked: 'ブロック中',
-    done: '完了',
-    archived: 'アーカイブ',
-  }
 
   const { data: view, isLoading: viewLoading, error: viewError } = useQuery({
     queryKey: ['view', projectId, viewId],
@@ -35,80 +20,33 @@ export default function ViewDetailPage() {
     queryKey: ['view-tasks', projectId, viewId],
     queryFn: async () => {
       try {
-        return await savedViewsApi.execute(projectId!, viewId!)
+        console.log('Executing view:', projectId, viewId)
+        const result = await savedViewsApi.execute(projectId!, viewId!)
+        console.log('View execution result:', result)
+        return result
       } catch (err: any) {
         console.error('Error executing view:', err)
-        console.error('Error details:', err.response?.data)
+        console.error('Error response:', err.response)
+        console.error('Error data:', err.response?.data)
+        console.error('Error status:', err.response?.status)
+        console.error('Error message:', err.message)
         throw err
       }
     },
-    enabled: !!projectId && !!viewId,
+    enabled: !!projectId && !!viewId && !!view,
   })
 
-  const showToast = (message: string) => {
-    setToastMessage(message)
-    setTimeout(() => setToastMessage(''), 3000)
-  }
+  const { toastMessage: copyToastMessage, copyTasksAsMarkdown, copyTasksAsText } = useCopyTasks()
+  const {
+    toastMessage: packToastMessage,
+    isTemplateModalOpen,
+    openTemplateModal,
+    generateWithTemplate,
+    closeTemplateModal,
+    isGenerating,
+  } = useTaskPack()
 
-  const copyTasksAsMarkdown = () => {
-    if (!tasks || tasks.length === 0) return
-
-    const markdown = tasks.map(task => {
-      const summary = (task.extra_meta as any)?.summary || ''
-      const lines = [
-        `## ${task.id}: ${task.title}`,
-        summary ? `> ${summary}` : '',
-        '',
-        `- **ステータス**: ${statusLabels[task.status] || task.status}`,
-        `- **優先度**: ${priorityLabels[task.priority] || task.priority}`,
-        task.start_date ? `- **開始日**: ${new Date(task.start_date).toLocaleDateString('ja-JP')}` : '',
-        task.due_date ? `- **期限**: ${new Date(task.due_date).toLocaleDateString('ja-JP')}` : '',
-        task.assignees && task.assignees.length > 0 ? `- **担当者**: ${task.assignees.join(', ')}` : '',
-        '',
-      ].filter(line => line !== '')
-      return lines.join('\n')
-    }).join('\n---\n\n')
-
-    navigator.clipboard.writeText(markdown)
-    showToast('📋 Markdown形式でコピーしました')
-  }
-
-  const copyTasksAsText = () => {
-    if (!tasks || tasks.length === 0) return
-
-    const viewName = view?.name || 'ビュー'
-    const header = `■${viewName}\n`
-
-    const taskLines = tasks.map(task => {
-      const summary = (task.extra_meta as any)?.summary || ''
-      const status = statusLabels[task.status] || task.status
-
-      // Date range
-      let dateRange = ''
-      if (task.start_date && task.due_date) {
-        const startDate = new Date(task.start_date).toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '/')
-        const endDate = new Date(task.due_date).toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '/')
-        dateRange = ` ${startDate}-${endDate}`
-      } else if (task.start_date) {
-        dateRange = ` ${new Date(task.start_date).toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '/')}-`
-      } else if (task.due_date) {
-        dateRange = ` -${new Date(task.due_date).toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '/')}`
-      }
-
-      // Assignees
-      const assignees = task.assignees && task.assignees.length > 0 ? ` 担当: ${task.assignees.join(', ')}` : ''
-
-      const mainLine = `・${task.title} 【${status}】${dateRange}${assignees}`
-      const summaryLine = summary ? `　⇒${summary}` : ''
-
-      return summaryLine ? `${mainLine}\n${summaryLine}` : mainLine
-    }).join('\n')
-
-    const text = header + taskLines
-
-    navigator.clipboard.writeText(text)
-    showToast('📄 テキスト形式でコピーしました')
-  }
+  const toastMessage = copyToastMessage || packToastMessage
 
   if (viewLoading) {
     return (
@@ -202,7 +140,7 @@ export default function ViewDetailPage() {
           <h2>タスク一覧</h2>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <button
-              onClick={copyTasksAsMarkdown}
+              onClick={() => copyTasksAsMarkdown(tasks || [])}
               disabled={!tasks || tasks.length === 0}
               style={{
                 backgroundColor: 'transparent',
@@ -232,7 +170,7 @@ export default function ViewDetailPage() {
               📋 Markdown
             </button>
             <button
-              onClick={copyTasksAsText}
+              onClick={() => copyTasksAsText(tasks || [], view?.name || 'ビュー')}
               disabled={!tasks || tasks.length === 0}
               style={{
                 backgroundColor: 'transparent',
@@ -261,6 +199,34 @@ export default function ViewDetailPage() {
             >
               📄 Text
             </button>
+            <button
+              onClick={() => openTemplateModal(tasks || [], projectId!)}
+              disabled={!tasks || tasks.length === 0}
+              style={{
+                backgroundColor: 'var(--color-primary)',
+                color: 'white',
+                border: 'none',
+                padding: '0.5rem 1rem',
+                fontSize: '0.875rem',
+                fontWeight: '600',
+                borderRadius: '6px',
+                cursor: (!tasks || tasks.length === 0) ? 'not-allowed' : 'pointer',
+                opacity: (!tasks || tasks.length === 0) ? 0.5 : 1,
+                transition: 'all 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                if (tasks && tasks.length > 0) {
+                  e.currentTarget.style.backgroundColor = 'var(--color-primary-hover)'
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (tasks && tasks.length > 0) {
+                  e.currentTarget.style.backgroundColor = 'var(--color-primary)'
+                }
+              }}
+            >
+              📦 Task Pack
+            </button>
           </div>
         </div>
 
@@ -271,25 +237,61 @@ export default function ViewDetailPage() {
             borderRadius: '8px',
             border: '2px solid var(--color-error)',
           }}>
-            <p style={{ color: 'var(--color-error)', marginBottom: '1rem' }}>
-              タスクの読み込みに失敗しました
+            <p style={{ color: 'var(--color-error)', marginBottom: '1rem', fontWeight: '600' }}>
+              ビューの実行に失敗しました
             </p>
-            <details style={{ fontSize: '0.875rem' }}>
-              <summary style={{ cursor: 'pointer', color: 'var(--color-text-secondary)' }}>
-                エラー詳細
-              </summary>
-              <pre style={{
-                marginTop: '0.5rem',
-                padding: '0.5rem',
+            {tasksError instanceof Error && (
+              <div style={{
+                marginBottom: '1rem',
+                padding: '1rem',
                 backgroundColor: 'var(--color-bg-tertiary)',
                 borderRadius: '4px',
-                overflow: 'auto',
-                color: 'var(--color-text-secondary)',
-                fontSize: '0.75rem',
+                fontSize: '0.875rem',
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
               }}>
-                {tasksError instanceof Error ? tasksError.message : JSON.stringify(tasksError, null, 2)}
-              </pre>
+                {tasksError.message}
+              </div>
+            )}
+            <details style={{ fontSize: '0.875rem' }}>
+              <summary style={{ cursor: 'pointer', color: 'var(--color-text-secondary)', fontWeight: '600' }}>
+                詳細情報
+              </summary>
+              <div style={{ marginTop: '0.5rem' }}>
+                <p style={{ marginBottom: '0.5rem', color: 'var(--color-text-secondary)' }}>
+                  ビュー情報:
+                </p>
+                <pre style={{
+                  padding: '0.5rem',
+                  backgroundColor: 'var(--color-bg-tertiary)',
+                  borderRadius: '4px',
+                  overflow: 'auto',
+                  color: 'var(--color-text-secondary)',
+                  fontSize: '0.75rem',
+                  marginBottom: '1rem',
+                }}>
+                  {JSON.stringify({ viewId, projectId, query: view?.raw_query }, null, 2)}
+                </pre>
+                <p style={{ marginBottom: '0.5rem', color: 'var(--color-text-secondary)' }}>
+                  エラー情報:
+                </p>
+                <pre style={{
+                  padding: '0.5rem',
+                  backgroundColor: 'var(--color-bg-tertiary)',
+                  borderRadius: '4px',
+                  overflow: 'auto',
+                  color: 'var(--color-text-secondary)',
+                  fontSize: '0.75rem',
+                }}>
+                  {tasksError instanceof Error ? tasksError.message : JSON.stringify(tasksError, null, 2)}
+                </pre>
+              </div>
             </details>
+            <div style={{ marginTop: '1rem' }}>
+              <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
+                ヒント: ビューのフィルター条件を再設定してみてください
+              </p>
+            </div>
           </div>
         ) : tasksLoading ? (
           <div style={{
@@ -370,6 +372,13 @@ export default function ViewDetailPage() {
           </div>
         )}
       </div>
+
+      <TaskPackModal
+        isOpen={isTemplateModalOpen}
+        onClose={closeTemplateModal}
+        onGenerate={generateWithTemplate}
+        isGenerating={isGenerating}
+      />
 
       {/* Toast Notification */}
       {toastMessage && (

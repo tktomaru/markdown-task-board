@@ -141,44 +141,58 @@ export default function CreateViewModal({ isOpen, onClose, projectId, view }: Cr
   const buildQueryFromFilters = (filters: FilterCondition): string => {
     const parts: string[] = []
 
-    if (filters.status && filters.status.length > 0) {
-      if (filters.status.length === 1) {
-        parts.push(`status:${filters.status[0]}`)
+    // Helper function to filter out undefined/null/empty values
+    const cleanArray = (arr: string[] | undefined): string[] => {
+      if (!arr) return []
+      return arr.filter(v => v !== undefined && v !== null && v !== '')
+    }
+
+    const cleanStatus = cleanArray(filters.status)
+    if (cleanStatus.length > 0) {
+      if (cleanStatus.length === 1) {
+        parts.push(`status:${cleanStatus[0]}`)
       } else {
-        parts.push(`status:(${filters.status.join(' ')})`)
+        parts.push(`status:(${cleanStatus.join(' ')})`)
       }
     }
-    if (filters.priority && filters.priority.length > 0) {
-      if (filters.priority.length === 1) {
-        parts.push(`priority:${filters.priority[0]}`)
+
+    const cleanPriority = cleanArray(filters.priority)
+    if (cleanPriority.length > 0) {
+      if (cleanPriority.length === 1) {
+        parts.push(`priority:${cleanPriority[0]}`)
       } else {
-        parts.push(`priority:(${filters.priority.join(' ')})`)
+        parts.push(`priority:(${cleanPriority.join(' ')})`)
       }
     }
-    if (filters.assignees && filters.assignees.length > 0) {
-      if (filters.assignees.length === 1) {
-        parts.push(`assignees:${filters.assignees[0]}`)
+
+    const cleanAssignees = cleanArray(filters.assignees)
+    if (cleanAssignees.length > 0) {
+      if (cleanAssignees.length === 1) {
+        parts.push(`assignees:${cleanAssignees[0]}`)
       } else {
-        parts.push(`assignees:(${filters.assignees.join(' ')})`)
+        parts.push(`assignees:(${cleanAssignees.join(' ')})`)
       }
     }
-    if (filters.labels && filters.labels.length > 0) {
-      if (filters.labels.length === 1) {
-        parts.push(`labels:${filters.labels[0]}`)
+
+    const cleanLabels = cleanArray(filters.labels)
+    if (cleanLabels.length > 0) {
+      if (cleanLabels.length === 1) {
+        parts.push(`labels:${cleanLabels[0]}`)
       } else {
-        parts.push(`labels:(${filters.labels.join(' ')})`)
+        parts.push(`labels:(${cleanLabels.join(' ')})`)
       }
     }
-    if (filters.startDateFrom) {
+
+    if (filters.startDateFrom && filters.startDateFrom.trim() !== '') {
       parts.push(`start_date:>=${filters.startDateFrom}`)
     }
-    if (filters.startDateTo) {
+    if (filters.startDateTo && filters.startDateTo.trim() !== '') {
       parts.push(`start_date:<=${filters.startDateTo}`)
     }
-    if (filters.dueDateFrom) {
+    if (filters.dueDateFrom && filters.dueDateFrom.trim() !== '') {
       parts.push(`due_date:>=${filters.dueDateFrom}`)
     }
-    if (filters.dueDateTo) {
+    if (filters.dueDateTo && filters.dueDateTo.trim() !== '') {
       parts.push(`due_date:<=${filters.dueDateTo}`)
     }
 
@@ -191,6 +205,11 @@ export default function CreateViewModal({ isOpen, onClose, projectId, view }: Cr
       queryClient.invalidateQueries({ queryKey: ['views', projectId] })
       onClose()
     },
+    onError: (error: any) => {
+      console.error('Failed to create view:', error)
+      console.error('Error response:', error.response?.data)
+      alert(`ビューの作成に失敗しました: ${error.message || 'Unknown error'}`)
+    },
   })
 
   const updateViewMutation = useMutation({
@@ -198,6 +217,11 @@ export default function CreateViewModal({ isOpen, onClose, projectId, view }: Cr
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['views', projectId] })
       onClose()
+    },
+    onError: (error: any) => {
+      console.error('Failed to update view:', error)
+      console.error('Error response:', error.response?.data)
+      alert(`ビューの更新に失敗しました: ${error.message || 'Unknown error'}`)
     },
   })
 
@@ -207,6 +231,12 @@ export default function CreateViewModal({ isOpen, onClose, projectId, view }: Cr
     const rawQuery = buildQueryFromFilters(filters)
     console.log('Generated query from filters:', rawQuery)
     console.log('Filters:', filters)
+
+    // Validate that query is not empty
+    if (!rawQuery || rawQuery.trim() === '') {
+      alert('少なくとも1つのフィルター条件を設定してください')
+      return
+    }
 
     const data: Partial<SavedView> = {
       name,

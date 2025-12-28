@@ -11,7 +11,9 @@
       "Bash(sudo docker compose logs:*)",
       "Bash(docker compose logs:*)",
       "Bash(curl:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(find:*)",
+      "Bash(grep:*)"
     ]
   }
 }

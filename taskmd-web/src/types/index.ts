@@ -87,6 +87,7 @@ export interface ApiError {
 
 // Task Pack types
 export interface TaskPackRequest {
+  project_id: string
   task_ids: string[]
   template: 'IMPLEMENT' | 'BUGFIX' | 'RESEARCH' | 'REVIEW'
   include_related?: boolean

@@ -160,7 +160,3 @@ func (s *Server) handleReadyCheck(c *gin.Context) {
 		"time":   time.Now().UTC(),
 	})
 }
-
-func (s *Server) handleGenerateTaskPack(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"message": "Generate task pack - not implemented"})
-}

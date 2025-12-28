@@ -24,8 +24,21 @@ const api = axios.create({
 export function handleApiError(error: unknown): never {
   if (axios.isAxiosError(error)) {
     const axiosError = error as AxiosError<ApiError>
-    const message = axiosError.response?.data?.message || axiosError.message
-    throw new Error(message)
+    const errorData = axiosError.response?.data
+    const message = errorData?.message || axiosError.message
+    const details = errorData?.details
+
+    // Log detailed error information
+    console.error('API Error:', {
+      message,
+      details,
+      status: axiosError.response?.status,
+      data: errorData,
+    })
+
+    // Include details in error message if available
+    const fullMessage = details ? `${message}\n詳細: ${details}` : message
+    throw new Error(fullMessage)
   }
   throw error
 }
@@ -214,12 +227,15 @@ export const savedViewsApi = {
 export const taskPackApi = {
   generate: async (data: TaskPackRequest): Promise<TaskPackResponse> => {
     try {
+      console.log('Task Pack request:', data)
       const response = await api.post<ApiResponse<TaskPackResponse>>(
         '/task-packs',
         data
       )
+      console.log('Task Pack API response:', response.data)
       return response.data.data
     } catch (error) {
+      console.error('Task Pack API error:', error)
       return handleApiError(error)
     }
   },
