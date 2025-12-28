@@ -6,6 +6,7 @@ import { getProject, getTasks, tasksApi } from '@/lib/api'
 import CreateTaskModal from '@/components/CreateTaskModal'
 import TaskPackModal from '@/components/TaskPackModal'
 import BulkEditModal, { type BulkUpdateData } from '@/components/BulkEditModal'
+import TaskDiffModal from '@/components/TaskDiffModal'
 import DueDateBadge from '@/components/DueDateBadge'
 import { useCopyTasks } from '@/hooks/useCopyTasks'
 import { useTaskPack } from '@/hooks/useTaskPack'
@@ -19,6 +20,7 @@ export default function ProjectPage() {
   const [isCreateTaskModalOpen, setIsCreateTaskModalOpen] = useState(false)
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set())
   const [isBulkEditModalOpen, setIsBulkEditModalOpen] = useState(false)
+  const [isDiffModalOpen, setIsDiffModalOpen] = useState(false)
 
   const { data: project, isLoading: projectLoading, error: projectError } = useQuery({
     queryKey: ['project', projectId],
@@ -216,6 +218,36 @@ export default function ProjectPage() {
               }}
             >
               📄 Text
+            </button>
+            <button
+              onClick={() => setIsDiffModalOpen(true)}
+              disabled={!tasks || tasks.length === 0}
+              style={{
+                backgroundColor: 'transparent',
+                color: 'var(--color-primary)',
+                border: '2px solid var(--color-primary)',
+                padding: '0.5rem 1rem',
+                fontSize: '0.875rem',
+                fontWeight: '600',
+                borderRadius: '6px',
+                cursor: (!tasks || tasks.length === 0) ? 'not-allowed' : 'pointer',
+                opacity: (!tasks || tasks.length === 0) ? 0.5 : 1,
+                transition: 'all 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                if (tasks && tasks.length > 0) {
+                  e.currentTarget.style.backgroundColor = 'var(--color-primary)'
+                  e.currentTarget.style.color = 'white'
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (tasks && tasks.length > 0) {
+                  e.currentTarget.style.backgroundColor = 'transparent'
+                  e.currentTarget.style.color = 'var(--color-primary)'
+                }
+              }}
+            >
+              🔍 差分
             </button>
             <button
               onClick={() => openTemplateModal(tasks || [], projectId!)}
@@ -498,6 +530,13 @@ export default function ProjectPage() {
         selectedTasks={selectedTasks}
         onUpdate={handleBulkUpdate}
         isUpdating={bulkUpdateMutation.isPending}
+      />
+
+      <TaskDiffModal
+        isOpen={isDiffModalOpen}
+        onClose={() => setIsDiffModalOpen(false)}
+        currentTasks={tasks || []}
+        projectName={project?.name || projectId || 'プロジェクト'}
       />
 
       {/* Toast Notification */}

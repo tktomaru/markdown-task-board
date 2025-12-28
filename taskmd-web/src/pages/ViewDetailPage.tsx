@@ -1,7 +1,9 @@
+import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { savedViewsApi } from '@/lib/api'
 import TaskPackModal from '@/components/TaskPackModal'
+import TaskDiffModal from '@/components/TaskDiffModal'
 import DueDateBadge from '@/components/DueDateBadge'
 import { useCopyTasks } from '@/hooks/useCopyTasks'
 import { useTaskPack } from '@/hooks/useTaskPack'
@@ -11,6 +13,7 @@ import { debug } from '@/lib/debug'
 export default function ViewDetailPage() {
   const { projectId, viewId } = useParams<{ projectId: string; viewId: string }>()
   const navigate = useNavigate()
+  const [isDiffModalOpen, setIsDiffModalOpen] = useState(false)
 
   const { data: view, isLoading: viewLoading, error: viewError } = useQuery({
     queryKey: ['view', projectId, viewId],
@@ -223,6 +226,36 @@ export default function ViewDetailPage() {
               📄 Text
             </button>
             <button
+              onClick={() => setIsDiffModalOpen(true)}
+              disabled={!tasks || tasks.length === 0}
+              style={{
+                backgroundColor: 'transparent',
+                color: 'var(--color-primary)',
+                border: '2px solid var(--color-primary)',
+                padding: '0.5rem 1rem',
+                fontSize: '0.875rem',
+                fontWeight: '600',
+                borderRadius: '6px',
+                cursor: (!tasks || tasks.length === 0) ? 'not-allowed' : 'pointer',
+                opacity: (!tasks || tasks.length === 0) ? 0.5 : 1,
+                transition: 'all 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                if (tasks && tasks.length > 0) {
+                  e.currentTarget.style.backgroundColor = 'var(--color-primary)'
+                  e.currentTarget.style.color = 'white'
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (tasks && tasks.length > 0) {
+                  e.currentTarget.style.backgroundColor = 'transparent'
+                  e.currentTarget.style.color = 'var(--color-primary)'
+                }
+              }}
+            >
+              🔍 差分
+            </button>
+            <button
               onClick={() => openTemplateModal(tasks || [], projectId!)}
               disabled={!tasks || tasks.length === 0}
               style={{
@@ -400,6 +433,13 @@ export default function ViewDetailPage() {
         onClose={closeTemplateModal}
         onGenerate={generateWithTemplate}
         isGenerating={isGenerating}
+      />
+
+      <TaskDiffModal
+        isOpen={isDiffModalOpen}
+        onClose={() => setIsDiffModalOpen(false)}
+        currentTasks={tasks || []}
+        projectName={view?.name || 'ビュー'}
       />
 
       {/* Toast Notification */}
