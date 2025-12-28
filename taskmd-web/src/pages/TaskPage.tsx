@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
-import { getTask } from '@/lib/api'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { getTask, updateTask } from '@/lib/api'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
@@ -11,6 +11,7 @@ import EditTaskModal from '@/components/EditTaskModal'
 export default function TaskPage() {
   const { projectId, taskId } = useParams<{ projectId: string; taskId: string }>()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [copySuccess, setCopySuccess] = useState(false)
 
@@ -19,6 +20,47 @@ export default function TaskPage() {
     queryFn: () => getTask(projectId!, taskId!),
     enabled: !!projectId && !!taskId,
   })
+
+  const updateTaskMutation = useMutation({
+    mutationFn: (data: any) => updateTask(projectId!, taskId!, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['task', projectId, taskId] })
+      queryClient.invalidateQueries({ queryKey: ['tasks', projectId] })
+    },
+    onError: (err: Error) => {
+      console.error('Failed to update task:', err)
+      alert('タスクの更新に失敗しました: ' + err.message)
+    },
+  })
+
+  const updateYamlField = (markdown: string, field: string, value: string): string => {
+    // Extract YAML frontmatter
+    const yamlMatch = markdown.match(/([\s\S]*?```yaml\n)([\s\S]*?)(\n```[\s\S]*)/)
+    if (!yamlMatch) {
+      console.error('YAML frontmatter not found')
+      return markdown
+    }
+
+    const [, before, yamlContent, after] = yamlMatch
+
+    // Update the field value
+    const fieldRegex = new RegExp(`(${field}:\\s*)\\S+`, 'm')
+    const updatedYaml = yamlContent.replace(fieldRegex, `$1${value}`)
+
+    return before + updatedYaml + after
+  }
+
+  const handleStatusChange = (newStatus: string) => {
+    if (!task) return
+    const updatedMarkdown = updateYamlField(task.markdown_body, 'status', newStatus)
+    updateTaskMutation.mutate({ markdown_body: updatedMarkdown })
+  }
+
+  const handlePriorityChange = (newPriority: string) => {
+    if (!task) return
+    const updatedMarkdown = updateYamlField(task.markdown_body, 'priority', newPriority)
+    updateTaskMutation.mutate({ markdown_body: updatedMarkdown })
+  }
 
   const handleCopyMarkdown = async () => {
     if (!task) return
@@ -52,23 +94,6 @@ export default function TaskPage() {
 
   if (!task) {
     return null
-  }
-
-  const statusLabels: { [key: string]: string } = {
-    open: '未着手',
-    in_progress: '進行中',
-    review: 'レビュー待ち',
-    blocked: 'ブロック中',
-    done: '完了',
-    archived: 'アーカイブ',
-  }
-
-  const priorityLabels: { [key: string]: string } = {
-    P0: 'P0 - 緊急',
-    P1: 'P1 - 今すぐ重要',
-    P2: 'P2 - 計画内重要',
-    P3: 'P3 - 余裕があれば',
-    P4: 'P4 - いつか',
   }
 
   const priorityColors: { [key: string]: string } = {
@@ -112,28 +137,57 @@ export default function TaskPage() {
             <span style={{ color: 'var(--color-text)', fontWeight: '500' }}>{task.id}</span>
           </div>
           <div>
-            <span style={{ color: 'var(--color-text-tertiary)' }}>ステータス: </span>
-            <span style={{
-              color: 'var(--color-text)',
-              fontWeight: '500',
-              padding: '0.25rem 0.5rem',
-              backgroundColor: 'var(--color-bg-secondary)',
-              borderRadius: '4px',
-            }}>
-              {statusLabels[task.status] || task.status}
-            </span>
+            <label style={{ color: 'var(--color-text-tertiary)', marginRight: '0.5rem' }}>
+              ステータス:
+            </label>
+            <select
+              value={task.status}
+              onChange={(e) => handleStatusChange(e.target.value)}
+              disabled={updateTaskMutation.isPending}
+              style={{
+                padding: '0.25rem 0.5rem',
+                borderRadius: '4px',
+                border: '1px solid var(--color-border)',
+                backgroundColor: 'var(--color-bg-secondary)',
+                color: 'var(--color-text)',
+                fontWeight: '500',
+                cursor: updateTaskMutation.isPending ? 'not-allowed' : 'pointer',
+                fontSize: '0.875rem',
+              }}
+            >
+              <option value="open">未着手</option>
+              <option value="in_progress">進行中</option>
+              <option value="review">レビュー待ち</option>
+              <option value="blocked">ブロック中</option>
+              <option value="done">完了</option>
+              <option value="archived">アーカイブ</option>
+            </select>
           </div>
           <div>
-            <span style={{ color: 'var(--color-text-tertiary)' }}>優先度: </span>
-            <span style={{
-              color: 'white',
-              fontWeight: '500',
-              padding: '0.25rem 0.5rem',
-              backgroundColor: priorityColors[task.priority] || '#757575',
-              borderRadius: '4px',
-            }}>
-              {priorityLabels[task.priority] || task.priority}
-            </span>
+            <label style={{ color: 'var(--color-text-tertiary)', marginRight: '0.5rem' }}>
+              優先度:
+            </label>
+            <select
+              value={task.priority}
+              onChange={(e) => handlePriorityChange(e.target.value)}
+              disabled={updateTaskMutation.isPending}
+              style={{
+                padding: '0.25rem 0.5rem',
+                borderRadius: '4px',
+                border: '1px solid var(--color-border)',
+                backgroundColor: priorityColors[task.priority] || '#757575',
+                color: 'white',
+                fontWeight: '500',
+                cursor: updateTaskMutation.isPending ? 'not-allowed' : 'pointer',
+                fontSize: '0.875rem',
+              }}
+            >
+              <option value="P0" style={{ backgroundColor: priorityColors.P0 }}>P0 - 緊急</option>
+              <option value="P1" style={{ backgroundColor: priorityColors.P1 }}>P1 - 今すぐ重要</option>
+              <option value="P2" style={{ backgroundColor: priorityColors.P2 }}>P2 - 計画内重要</option>
+              <option value="P3" style={{ backgroundColor: priorityColors.P3 }}>P3 - 余裕があれば</option>
+              <option value="P4" style={{ backgroundColor: priorityColors.P4 }}>P4 - いつか</option>
+            </select>
           </div>
         </div>
 
