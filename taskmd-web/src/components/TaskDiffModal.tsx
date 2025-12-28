@@ -187,7 +187,7 @@ export default function TaskDiffModal({
     // For marker mode, use inline text without div tags
     if (isMarker) {
       const mainText = `・${titlePart} ${statusPart}${dateRange}${assignees}`
-      const summaryText = summaryPart ? `⇒${summaryPart}` : ''
+      const summaryText = summaryPart ? `　⇒${summaryPart}` : ''
       return mainText + (summaryText ? lb + summaryText : '')
     }
 
@@ -214,52 +214,32 @@ export default function TaskDiffModal({
 
     const htmlParts: string[] = []
 
-    // Added tasks (in highlight color)
-    if (diffResult.added.length > 0) {
-      const sectionHeader = isMarker
-        ? `<span style="font-weight: bold; color: ${highlightColor};">【追加】</span>`
-        : `<div style="font-weight: bold; color: ${highlightColor};">【追加】</div>`
-      htmlParts.push(sectionHeader)
-      diffResult.added.forEach(task => {
-        htmlParts.push(formatTaskAsHtml(task, highlightColor, lb))
-      })
-    }
+    // Process tasks in current order
+    currentTasks.forEach(task => {
+      const isAdded = diffResult.added.some(t => t.id === task.id)
+      const isModified = diffResult.modified.some(t => t.id === task.id)
 
-    // Modified tasks (in highlight color) - show diff at field level
-    if (diffResult.modified.length > 0) {
-      const sectionHeader = isMarker
-        ? `<span style="font-weight: bold; color: ${highlightColor};">【変更】</span>`
-        : `<div style="font-weight: bold; color: ${highlightColor};">【変更】</div>`
-      htmlParts.push(sectionHeader)
-      diffResult.modified.forEach(task => {
+      if (isAdded) {
+        // Added task - full highlight
+        htmlParts.push(formatTaskAsHtml(task, highlightColor, lb))
+      } else if (isModified) {
+        // Modified task - highlight only changed fields
         const baselineTask = baselineTasks.find(t => t.id === task.id)
         htmlParts.push(formatTaskAsHtml(task, highlightColor, lb, baselineTask))
-      })
-    }
+      } else {
+        // Unchanged task - normal display
+        htmlParts.push(formatTaskAsHtml(task, undefined, lb))
+      }
+    })
 
-    // Removed tasks (strikethrough in gray)
+    // Add removed tasks at the end with strikethrough
     if (diffResult.removed.length > 0) {
-      const sectionHeader = isMarker
-        ? `<span style="font-weight: bold; color: #999;">【削除】</span>`
-        : `<div style="font-weight: bold; color: #999;">【削除】</div>`
-      htmlParts.push(sectionHeader)
       diffResult.removed.forEach(task => {
         const taskHtml = formatTaskAsHtml(task, '#999', lb)
         const styledHtml = isMarker
           ? `<span style="text-decoration: line-through;">${taskHtml}</span>`
           : taskHtml.replace('<div', '<div style="text-decoration: line-through;"')
         htmlParts.push(styledHtml)
-      })
-    }
-
-    // Unchanged tasks (normal color)
-    if (diffResult.unchanged.length > 0) {
-      const sectionHeader = isMarker
-        ? `<span style="font-weight: bold;">【変更なし】</span>`
-        : `<div style="font-weight: bold;">【変更なし】</div>`
-      htmlParts.push(sectionHeader)
-      diffResult.unchanged.forEach(task => {
-        htmlParts.push(formatTaskAsHtml(task, undefined, lb))
       })
     }
 
@@ -554,52 +534,32 @@ export default function TaskDiffModal({
               }}>
                 <div style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>■{projectName}</div>
 
-                {diffResult.added.length > 0 && (
-                  <>
-                    <div style={{ fontWeight: 'bold', color: highlightColor, marginTop: '0.75rem', marginBottom: '0.25rem' }}>
-                      【追加】
-                    </div>
-                    {diffResult.added.map((task, idx) => (
-                      <div key={`added-${idx}`} dangerouslySetInnerHTML={{ __html: formatTaskAsHtml(task, highlightColor) }} />
-                    ))}
-                  </>
-                )}
+                {currentTasks.map((task, idx) => {
+                  const isAdded = diffResult.added.some(t => t.id === task.id)
+                  const isModified = diffResult.modified.some(t => t.id === task.id)
 
-                {diffResult.modified.length > 0 && (
-                  <>
-                    <div style={{ fontWeight: 'bold', color: highlightColor, marginTop: '0.75rem', marginBottom: '0.25rem' }}>
-                      【変更】
-                    </div>
-                    {diffResult.modified.map((task, idx) => {
-                      const baselineTask = baselineTasks.find(t => t.id === task.id)
-                      return (
-                        <div key={`modified-${idx}`} dangerouslySetInnerHTML={{ __html: formatTaskAsHtml(task, highlightColor, '\n', baselineTask) }} />
-                      )
-                    })}
-                  </>
-                )}
+                  if (isAdded) {
+                    // Added task - full highlight
+                    return (
+                      <div key={`task-${idx}`} dangerouslySetInnerHTML={{ __html: formatTaskAsHtml(task, highlightColor, '\n') }} />
+                    )
+                  } else if (isModified) {
+                    // Modified task - highlight only changed fields
+                    const baselineTask = baselineTasks.find(t => t.id === task.id)
+                    return (
+                      <div key={`task-${idx}`} dangerouslySetInnerHTML={{ __html: formatTaskAsHtml(task, highlightColor, '\n', baselineTask) }} />
+                    )
+                  } else {
+                    // Unchanged task - normal display
+                    return (
+                      <div key={`task-${idx}`} dangerouslySetInnerHTML={{ __html: formatTaskAsHtml(task, undefined, '\n') }} />
+                    )
+                  }
+                })}
 
-                {diffResult.removed.length > 0 && (
-                  <>
-                    <div style={{ fontWeight: 'bold', color: '#999', marginTop: '0.75rem', marginBottom: '0.25rem' }}>
-                      【削除】
-                    </div>
-                    {diffResult.removed.map((task, idx) => (
-                      <div key={`removed-${idx}`} style={{ textDecoration: 'line-through' }} dangerouslySetInnerHTML={{ __html: formatTaskAsHtml(task, '#999') }} />
-                    ))}
-                  </>
-                )}
-
-                {diffResult.unchanged.length > 0 && (
-                  <>
-                    <div style={{ fontWeight: 'bold', marginTop: '0.75rem', marginBottom: '0.25rem' }}>
-                      【変更なし】
-                    </div>
-                    {diffResult.unchanged.map((task, idx) => (
-                      <div key={`unchanged-${idx}`} dangerouslySetInnerHTML={{ __html: formatTaskAsHtml(task) }} />
-                    ))}
-                  </>
-                )}
+                {diffResult.removed.length > 0 && diffResult.removed.map((task, idx) => (
+                  <div key={`removed-${idx}`} style={{ textDecoration: 'line-through' }} dangerouslySetInnerHTML={{ __html: formatTaskAsHtml(task, '#999', '\n') }} />
+                ))}
               </div>
             </div>
           </>
