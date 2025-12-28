@@ -55,6 +55,14 @@ export default function CreateViewModal({ isOpen, onClose, projectId, view }: Cr
     }
   }, [view])
 
+  // Helper function to check if a date value is relative
+  const isRelativeDate = (value: string): boolean => {
+    // Check for relative date patterns: today, -Nd, +Nd
+    return value === 'today' ||
+           /^-\d+d$/.test(value) ||
+           /^\+\d+d$/.test(value)
+  }
+
   const parseQueryToFilters = (query: string): FilterCondition => {
     // Parser for query string
     // Format: status:(open in_progress) priority:P0 start_date:>=2024-01-01
@@ -118,15 +126,39 @@ export default function CreateViewModal({ isOpen, onClose, projectId, view }: Cr
         // Single value or date with operator
         if (key === 'start_date') {
           if (valueStr.startsWith('>=')) {
-            filters.startDateFrom = valueStr.substring(2)
+            const dateValue = valueStr.substring(2)
+            // Check if it's a relative date
+            if (isRelativeDate(dateValue)) {
+              filters.startDateFromRelative = dateValue
+            } else {
+              filters.startDateFrom = dateValue
+            }
           } else if (valueStr.startsWith('<=')) {
-            filters.startDateTo = valueStr.substring(2)
+            const dateValue = valueStr.substring(2)
+            // Check if it's a relative date
+            if (isRelativeDate(dateValue)) {
+              filters.startDateToRelative = dateValue
+            } else {
+              filters.startDateTo = dateValue
+            }
           }
         } else if (key === 'due_date') {
           if (valueStr.startsWith('>=')) {
-            filters.dueDateFrom = valueStr.substring(2)
+            const dateValue = valueStr.substring(2)
+            // Check if it's a relative date
+            if (isRelativeDate(dateValue)) {
+              filters.dueDateFromRelative = dateValue
+            } else {
+              filters.dueDateFrom = dateValue
+            }
           } else if (valueStr.startsWith('<=')) {
-            filters.dueDateTo = valueStr.substring(2)
+            const dateValue = valueStr.substring(2)
+            // Check if it's a relative date
+            if (isRelativeDate(dateValue)) {
+              filters.dueDateToRelative = dateValue
+            } else {
+              filters.dueDateTo = dateValue
+            }
           }
         } else {
           // Single value
@@ -450,7 +482,7 @@ export default function CreateViewModal({ isOpen, onClose, projectId, view }: Cr
             </label>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.5rem' }}>
               <div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)', marginBottom: '0.25rem' }}>開始（以降）</div>
+                <div style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: '0.25rem', fontWeight: '500' }}>開始（以降）</div>
                 <select
                   value={filters.startDateFromRelative || ''}
                   onChange={(e) => setFilters({ ...filters, startDateFromRelative: e.target.value, startDateFrom: '' })}
@@ -478,7 +510,7 @@ export default function CreateViewModal({ isOpen, onClose, projectId, view }: Cr
                 </select>
               </div>
               <div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)', marginBottom: '0.25rem' }}>終了（以前）</div>
+                <div style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: '0.25rem', fontWeight: '500' }}>終了（以前）</div>
                 <select
                   value={filters.startDateToRelative || ''}
                   onChange={(e) => setFilters({ ...filters, startDateToRelative: e.target.value, startDateTo: '' })}
@@ -514,7 +546,7 @@ export default function CreateViewModal({ isOpen, onClose, projectId, view }: Cr
             </label>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.5rem' }}>
               <div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)', marginBottom: '0.25rem' }}>開始（以降）</div>
+                <div style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: '0.25rem', fontWeight: '500' }}>開始（以降）</div>
                 <select
                   value={filters.dueDateFromRelative || ''}
                   onChange={(e) => setFilters({ ...filters, dueDateFromRelative: e.target.value, dueDateFrom: '' })}
@@ -542,7 +574,7 @@ export default function CreateViewModal({ isOpen, onClose, projectId, view }: Cr
                 </select>
               </div>
               <div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)', marginBottom: '0.25rem' }}>終了（以前）</div>
+                <div style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: '0.25rem', fontWeight: '500' }}>終了（以前）</div>
                 <select
                   value={filters.dueDateToRelative || ''}
                   onChange={(e) => setFilters({ ...filters, dueDateToRelative: e.target.value, dueDateTo: '' })}
