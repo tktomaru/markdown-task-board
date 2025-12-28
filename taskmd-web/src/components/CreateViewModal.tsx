@@ -54,11 +54,18 @@ export default function CreateViewModal({ isOpen, onClose, projectId, view }: Cr
     // Parser for query string
     // Format: status:(open in_progress) priority:P0 start_date:>=2024-01-01
     const filters: FilterCondition = {}
+    if (!query || query.trim() === '') return filters
+
     const parts = query.split(' ')
 
     let i = 0
     while (i < parts.length) {
       const part = parts[i]
+      if (!part || part.trim() === '') {
+        i++
+        continue
+      }
+
       const colonIndex = part.indexOf(':')
       if (colonIndex === -1) {
         i++
@@ -72,18 +79,30 @@ export default function CreateViewModal({ isOpen, onClose, projectId, view }: Cr
       if (valueStr.startsWith('(')) {
         // Collect values until closing parenthesis
         const values: string[] = []
-        valueStr = valueStr.substring(1) // Remove opening (
 
-        while (i < parts.length) {
-          const currentPart = i === parts.indexOf(part) ? valueStr : parts[i]
-          if (currentPart.endsWith(')')) {
-            const cleanValue = currentPart.substring(0, currentPart.length - 1)
-            if (cleanValue) values.push(cleanValue)
-            break
-          } else {
-            if (currentPart) values.push(currentPart)
-          }
+        // Remove opening parenthesis
+        if (valueStr.length > 1 && !valueStr.endsWith(')')) {
+          // Opening paren is separate from values
+          valueStr = valueStr.substring(1)
+          if (valueStr) values.push(valueStr)
           i++
+
+          // Continue collecting until closing paren
+          while (i < parts.length) {
+            const currentPart = parts[i]
+            if (currentPart.endsWith(')')) {
+              const cleanValue = currentPart.substring(0, currentPart.length - 1)
+              if (cleanValue) values.push(cleanValue)
+              break
+            } else {
+              if (currentPart) values.push(currentPart)
+            }
+            i++
+          }
+        } else {
+          // All in one part: key:(value) or key:()
+          const inner = valueStr.substring(1, valueStr.length - 1)
+          if (inner) values.push(inner)
         }
 
         if (key === 'status') filters.status = values
@@ -186,6 +205,9 @@ export default function CreateViewModal({ isOpen, onClose, projectId, view }: Cr
     e.preventDefault()
 
     const rawQuery = buildQueryFromFilters(filters)
+    console.log('Generated query from filters:', rawQuery)
+    console.log('Filters:', filters)
+
     const data: Partial<SavedView> = {
       name,
       description: description || undefined,
@@ -196,8 +218,10 @@ export default function CreateViewModal({ isOpen, onClose, projectId, view }: Cr
     }
 
     if (view) {
+      console.log('Updating view with data:', data)
       updateViewMutation.mutate(data)
     } else {
+      console.log('Creating view with data:', data)
       createViewMutation.mutate(data)
     }
   }
