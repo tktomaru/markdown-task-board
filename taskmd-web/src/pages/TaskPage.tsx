@@ -9,6 +9,8 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import EditTaskModal from '@/components/EditTaskModal'
 import AssigneeEditor from '@/components/AssigneeEditor'
+import TaskPackModal from '@/components/TaskPackModal'
+import { useTaskPack } from '@/hooks/useTaskPack'
 
 export default function TaskPage() {
   const { projectId, taskId } = useParams<{ projectId: string; taskId: string }>()
@@ -17,6 +19,15 @@ export default function TaskPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [copySuccess, setCopySuccess] = useState(false)
   const [summary, setSummary] = useState('')
+
+  const {
+    toastMessage: packToastMessage,
+    isTemplateModalOpen,
+    openTemplateModal,
+    generateWithTemplate,
+    closeTemplateModal,
+    isGenerating,
+  } = useTaskPack()
 
   const { data: task, isLoading, error } = useQuery({
     queryKey: ['task', projectId, taskId],
@@ -574,6 +585,8 @@ export default function TaskPage() {
           編集
         </button>
         <button
+          onClick={() => task && openTemplateModal([task], projectId!)}
+          disabled={!task}
           style={{
             backgroundColor: 'transparent',
             color: 'var(--color-text)',
@@ -582,10 +595,11 @@ export default function TaskPage() {
             fontSize: '1rem',
             fontWeight: '600',
             borderRadius: '6px',
-            cursor: 'pointer',
+            cursor: task ? 'pointer' : 'not-allowed',
+            opacity: task ? 1 : 0.5,
           }}
         >
-          タスクパックを生成
+          📦 タスクパックを生成
         </button>
       </div>
 
@@ -613,6 +627,36 @@ export default function TaskPage() {
           projectId={projectId!}
           task={task}
         />
+      )}
+
+      {/* Task Pack Modal */}
+      <TaskPackModal
+        isOpen={isTemplateModalOpen}
+        onClose={closeTemplateModal}
+        onGenerate={generateWithTemplate}
+        isGenerating={isGenerating}
+      />
+
+      {/* Toast Notification */}
+      {packToastMessage && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: '2rem',
+            right: '2rem',
+            backgroundColor: 'var(--color-success)',
+            color: 'white',
+            padding: '1rem 1.5rem',
+            borderRadius: '8px',
+            boxShadow: 'var(--shadow-lg)',
+            fontSize: '0.875rem',
+            fontWeight: '500',
+            zIndex: 1000,
+            animation: 'slideInUp 0.3s ease-out',
+          }}
+        >
+          {packToastMessage}
+        </div>
       )}
     </div>
   )
