@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getTask, updateTask } from '@/lib/api'
@@ -16,12 +16,20 @@ export default function TaskPage() {
   const queryClient = useQueryClient()
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [copySuccess, setCopySuccess] = useState(false)
+  const [summary, setSummary] = useState('')
 
   const { data: task, isLoading, error } = useQuery({
     queryKey: ['task', projectId, taskId],
     queryFn: () => getTask(projectId!, taskId!),
     enabled: !!projectId && !!taskId,
   })
+
+  // Update local summary state when task is loaded
+  useEffect(() => {
+    if (task) {
+      setSummary((task.extra_meta as any)?.summary || '')
+    }
+  }, [task])
 
   const updateTaskMutation = useMutation({
     mutationFn: (data: any) => updateTask(projectId!, taskId!, data),
@@ -129,6 +137,16 @@ export default function TaskPage() {
 
     const updatedMarkdown = before + updatedYaml + after
     updateTaskMutation.mutate({ markdown_body: updatedMarkdown })
+  }
+
+  const handleSummaryBlur = () => {
+    if (!task) return
+
+    // Only update if summary has changed
+    const currentSummary = (task.extra_meta as any)?.summary || ''
+    if (summary === currentSummary) return
+
+    handleDateChange('summary', summary)
   }
 
   const handleCopyMarkdown = async () => {
@@ -370,6 +388,30 @@ export default function TaskPage() {
             assignees={task.assignees || []}
             onChange={handleAssigneesChange}
             disabled={updateTaskMutation.isPending}
+          />
+        </div>
+
+        {/* Summary Field */}
+        <div style={{ marginTop: '1rem' }}>
+          <label style={{ display: 'block', color: 'var(--color-text-tertiary)', marginBottom: '0.5rem', fontSize: '0.875rem' }}>
+            概要（一言要約）:
+          </label>
+          <input
+            type="text"
+            value={summary}
+            onChange={(e) => setSummary(e.target.value)}
+            onBlur={handleSummaryBlur}
+            disabled={updateTaskMutation.isPending}
+            placeholder="タスクの概要を一言で記入してください"
+            style={{
+              width: '100%',
+              padding: '0.5rem',
+              borderRadius: '4px',
+              border: '1px solid var(--color-border)',
+              backgroundColor: 'var(--color-bg-secondary)',
+              color: 'var(--color-text)',
+              fontSize: '0.875rem',
+            }}
           />
         </div>
       </div>
