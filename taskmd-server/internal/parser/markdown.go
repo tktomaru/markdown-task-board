@@ -13,14 +13,14 @@ import (
 
 // TaskMetadata represents the YAML frontmatter metadata
 type TaskMetadata struct {
-	ID        string    `yaml:"id"`
-	Status    string    `yaml:"status"`
-	Priority  string    `yaml:"priority"`
-	Assignees []string  `yaml:"assignees"`
-	Labels    []string  `yaml:"labels"`
-	StartDate *string   `yaml:"start"`
-	DueDate   *string   `yaml:"due"`
-	ExtraMeta yaml.Node `yaml:",inline"`
+	ID        string                 `yaml:"id"`
+	Status    string                 `yaml:"status"`
+	Priority  string                 `yaml:"priority"`
+	Assignees []string               `yaml:"assignees"`
+	Labels    []string               `yaml:"labels"`
+	StartDate *string                `yaml:"start_date"`
+	DueDate   *string                `yaml:"due_date"`
+	ExtraMeta map[string]interface{} `yaml:"extra_meta"`
 }
 
 // ParsedTask represents a parsed task with metadata and body
@@ -159,6 +159,11 @@ func (pt *ParsedTask) ToTask(projectID string) (*models.Task, error) {
 		task.DueDate = &dueDate
 	}
 
+	// Set ExtraMeta from parsed metadata
+	if pt.Metadata.ExtraMeta != nil {
+		task.ExtraMeta = models.JSONB(pt.Metadata.ExtraMeta)
+	}
+
 	return task, nil
 }
 
@@ -209,11 +214,11 @@ func GenerateMarkdown(task *models.Task) string {
 	}
 
 	if task.StartDate != nil {
-		sb.WriteString(fmt.Sprintf("start: %s\n", task.StartDate.Format("2006-01-02")))
+		sb.WriteString(fmt.Sprintf("start_date: %s\n", task.StartDate.Format("2006-01-02")))
 	}
 
 	if task.DueDate != nil {
-		sb.WriteString(fmt.Sprintf("due: %s\n", task.DueDate.Format("2006-01-02")))
+		sb.WriteString(fmt.Sprintf("due_date: %s\n", task.DueDate.Format("2006-01-02")))
 	}
 
 	if len(task.Labels) > 0 {
@@ -225,6 +230,21 @@ func GenerateMarkdown(task *models.Task) string {
 			sb.WriteString(label)
 		}
 		sb.WriteString("]\n")
+	}
+
+	// Add extra_meta if present
+	if len(task.ExtraMeta) > 0 {
+		sb.WriteString("extra_meta: {")
+		first := true
+		for key, value := range task.ExtraMeta {
+			if !first {
+				sb.WriteString(", ")
+			}
+			first = false
+			// Format value as JSON string
+			sb.WriteString(fmt.Sprintf(`"%s": "%v"`, key, value))
+		}
+		sb.WriteString("}\n")
 	}
 
 	sb.WriteString("```\n\n")

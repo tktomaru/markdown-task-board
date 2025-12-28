@@ -235,31 +235,37 @@ func (a *StringArray) scanBytes(src []byte) error {
 		return nil
 	}
 
+	// Convert to string for proper UTF-8 handling
+	str := string(src)
+
 	// Remove outer braces
-	if src[0] == '{' && src[len(src)-1] == '}' {
-		src = src[1 : len(src)-1]
+	if str[0] == '{' && str[len(str)-1] == '}' {
+		str = str[1 : len(str)-1]
 	}
 
 	// Split by comma (simplified - doesn't handle nested arrays or escaped commas)
 	var result []string
 	current := ""
 	inQuote := false
+	prevRune := rune(0)
 
-	for i := 0; i < len(src); i++ {
-		c := src[i]
-
-		if c == '"' && (i == 0 || src[i-1] != '\\') {
+	// Iterate over runes for proper UTF-8 handling
+	for _, r := range str {
+		if r == '"' && prevRune != '\\' {
 			inQuote = !inQuote
+			prevRune = r
 			continue
 		}
 
-		if c == ',' && !inQuote {
+		if r == ',' && !inQuote {
 			result = append(result, current)
 			current = ""
+			prevRune = r
 			continue
 		}
 
-		current += string(c)
+		current += string(r)
+		prevRune = r
 	}
 
 	if current != "" {

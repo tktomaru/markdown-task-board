@@ -7,6 +7,7 @@ import remarkGfm from 'remark-gfm'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import EditTaskModal from '@/components/EditTaskModal'
+import AssigneeEditor from '@/components/AssigneeEditor'
 
 export default function TaskPage() {
   const { projectId, taskId } = useParams<{ projectId: string; taskId: string }>()
@@ -59,6 +60,73 @@ export default function TaskPage() {
   const handlePriorityChange = (newPriority: string) => {
     if (!task) return
     const updatedMarkdown = updateYamlField(task.markdown_body, 'priority', newPriority)
+    updateTaskMutation.mutate({ markdown_body: updatedMarkdown })
+  }
+
+  const handleDateChange = (field: string, value: string) => {
+    if (!task) return
+
+    const yamlMatch = task.markdown_body.match(/([\s\S]*?```yaml\n)([\s\S]*?)(\n```[\s\S]*)/)
+    if (!yamlMatch) return
+
+    const [, before, yamlContent, after] = yamlMatch
+    let updatedYaml = yamlContent
+
+    // start_date and due_date are regular YAML fields
+    if (field === 'start_date' || field === 'due_date') {
+      const fieldRegex = new RegExp(`(${field}:\\s*)\\S*`, 'm')
+      if (yamlContent.match(fieldRegex)) {
+        // Update existing field
+        updatedYaml = yamlContent.replace(fieldRegex, `$1${value}`)
+      } else {
+        // Add new field
+        updatedYaml = yamlContent + `\n${field}: ${value}`
+      }
+    } else {
+      // actual_start_date and actual_end_date go in extra_meta
+      const extraMetaMatch = yamlContent.match(/extra_meta:\s*\{[^}]*\}/)
+
+      if (extraMetaMatch) {
+        // Update existing extra_meta
+        const currentExtraMeta = extraMetaMatch[0]
+        const extraMetaObj = currentExtraMeta.match(/\{([^}]*)\}/)?.[1] || ''
+
+        // Parse existing fields
+        const fields: { [key: string]: string } = {}
+        extraMetaObj.split(',').forEach(pair => {
+          const [k, v] = pair.split(':').map(s => s.trim())
+          if (k && v) fields[k.replace(/"/g, '')] = v.replace(/"/g, '')
+        })
+
+        // Update field
+        fields[field] = value
+
+        // Rebuild extra_meta
+        const newExtraMeta = `extra_meta: {${Object.entries(fields).map(([k, v]) => `"${k}": "${v}"`).join(', ')}}`
+        updatedYaml = yamlContent.replace(/extra_meta:\s*\{[^}]*\}/, newExtraMeta)
+      } else {
+        // Add extra_meta
+        updatedYaml = yamlContent + `\nextra_meta: {"${field}": "${value}"}`
+      }
+    }
+
+    const updatedMarkdown = before + updatedYaml + after
+    updateTaskMutation.mutate({ markdown_body: updatedMarkdown })
+  }
+
+  const handleAssigneesChange = (newAssignees: string[]) => {
+    if (!task) return
+
+    const yamlMatch = task.markdown_body.match(/([\s\S]*?```yaml\n)([\s\S]*?)(\n```[\s\S]*)/)
+    if (!yamlMatch) return
+
+    const [, before, yamlContent, after] = yamlMatch
+
+    // Update assignees array
+    const assigneesStr = `[${newAssignees.map(a => `"${a}"`).join(', ')}]`
+    const updatedYaml = yamlContent.replace(/assignees:\s*\[[^\]]*\]/, `assignees: ${assigneesStr}`)
+
+    const updatedMarkdown = before + updatedYaml + after
     updateTaskMutation.mutate({ markdown_body: updatedMarkdown })
   }
 
@@ -191,84 +259,107 @@ export default function TaskPage() {
           </div>
         </div>
 
-        {/* Assignees and Labels */}
-        {(task.assignees?.length > 0 || task.labels?.length > 0) && (
-          <div style={{
-            display: 'flex',
-            gap: '1.5rem',
-            marginTop: '1rem',
-            fontSize: '0.875rem',
-          }}>
-            {task.assignees?.length > 0 && (
-              <div>
-                <span style={{ color: 'var(--color-text-tertiary)' }}>担当者: </span>
-                {task.assignees.map((assignee, index) => (
-                  <span
-                    key={index}
-                    style={{
-                      display: 'inline-block',
-                      marginLeft: '0.25rem',
-                      padding: '0.25rem 0.5rem',
-                      backgroundColor: 'var(--color-bg-secondary)',
-                      borderRadius: '4px',
-                      color: 'var(--color-text)',
-                    }}
-                  >
-                    {assignee}
-                  </span>
-                ))}
-              </div>
-            )}
-            {task.labels?.length > 0 && (
-              <div>
-                <span style={{ color: 'var(--color-text-tertiary)' }}>ラベル: </span>
-                {task.labels.map((label, index) => (
-                  <span
-                    key={index}
-                    style={{
-                      display: 'inline-block',
-                      marginLeft: '0.25rem',
-                      padding: '0.25rem 0.5rem',
-                      backgroundColor: 'var(--color-primary)',
-                      borderRadius: '4px',
-                      color: 'white',
-                      fontSize: '0.75rem',
-                    }}
-                  >
-                    {label}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
         {/* Dates */}
-        {(task.start_date || task.due_date) && (
-          <div style={{
-            display: 'flex',
-            gap: '1.5rem',
-            marginTop: '1rem',
-            fontSize: '0.875rem',
-          }}>
-            {task.start_date && (
-              <div>
-                <span style={{ color: 'var(--color-text-tertiary)' }}>開始日: </span>
-                <span style={{ color: 'var(--color-text)' }}>
-                  {new Date(task.start_date).toLocaleDateString('ja-JP')}
-                </span>
-              </div>
-            )}
-            {task.due_date && (
-              <div>
-                <span style={{ color: 'var(--color-text-tertiary)' }}>期限: </span>
-                <span style={{ color: 'var(--color-text)' }}>
-                  {new Date(task.due_date).toLocaleDateString('ja-JP')}
-                </span>
-              </div>
-            )}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+          gap: '1rem',
+          marginTop: '1rem',
+          fontSize: '0.875rem',
+        }}>
+          <div>
+            <label style={{ display: 'block', color: 'var(--color-text-tertiary)', marginBottom: '0.25rem' }}>
+              予定開始日:
+            </label>
+            <input
+              type="date"
+              value={task.start_date ? new Date(task.start_date).toISOString().split('T')[0] : ''}
+              onChange={(e) => handleDateChange('start_date', e.target.value)}
+              disabled={updateTaskMutation.isPending}
+              style={{
+                width: '100%',
+                padding: '0.25rem 0.5rem',
+                borderRadius: '4px',
+                border: '1px solid var(--color-border)',
+                backgroundColor: 'var(--color-bg-secondary)',
+                color: 'var(--color-text)',
+                fontSize: '0.875rem',
+              }}
+            />
           </div>
-        )}
+          <div>
+            <label style={{ display: 'block', color: 'var(--color-text-tertiary)', marginBottom: '0.25rem' }}>
+              予定終了日:
+            </label>
+            <input
+              type="date"
+              value={task.due_date ? new Date(task.due_date).toISOString().split('T')[0] : ''}
+              onChange={(e) => handleDateChange('due_date', e.target.value)}
+              disabled={updateTaskMutation.isPending}
+              style={{
+                width: '100%',
+                padding: '0.25rem 0.5rem',
+                borderRadius: '4px',
+                border: '1px solid var(--color-border)',
+                backgroundColor: 'var(--color-bg-secondary)',
+                color: 'var(--color-text)',
+                fontSize: '0.875rem',
+              }}
+            />
+          </div>
+          <div>
+            <label style={{ display: 'block', color: 'var(--color-text-tertiary)', marginBottom: '0.25rem' }}>
+              実績開始日:
+            </label>
+            <input
+              type="date"
+              value={(task.extra_meta as any)?.actual_start_date || ''}
+              onChange={(e) => handleDateChange('actual_start_date', e.target.value)}
+              disabled={updateTaskMutation.isPending}
+              style={{
+                width: '100%',
+                padding: '0.25rem 0.5rem',
+                borderRadius: '4px',
+                border: '1px solid var(--color-border)',
+                backgroundColor: 'var(--color-bg-secondary)',
+                color: 'var(--color-text)',
+                fontSize: '0.875rem',
+              }}
+            />
+          </div>
+          <div>
+            <label style={{ display: 'block', color: 'var(--color-text-tertiary)', marginBottom: '0.25rem' }}>
+              実績終了日:
+            </label>
+            <input
+              type="date"
+              value={(task.extra_meta as any)?.actual_end_date || ''}
+              onChange={(e) => handleDateChange('actual_end_date', e.target.value)}
+              disabled={updateTaskMutation.isPending}
+              style={{
+                width: '100%',
+                padding: '0.25rem 0.5rem',
+                borderRadius: '4px',
+                border: '1px solid var(--color-border)',
+                backgroundColor: 'var(--color-bg-secondary)',
+                color: 'var(--color-text)',
+                fontSize: '0.875rem',
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Assignees Editor */}
+        <div style={{ marginTop: '1rem' }}>
+          <label style={{ display: 'block', color: 'var(--color-text-tertiary)', marginBottom: '0.5rem', fontSize: '0.875rem' }}>
+            担当者:
+          </label>
+          <AssigneeEditor
+            assignees={task.assignees || []}
+            onChange={handleAssigneesChange}
+            disabled={updateTaskMutation.isPending}
+          />
+        </div>
       </div>
 
       {/* Markdown Body */}

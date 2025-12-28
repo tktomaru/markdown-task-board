@@ -141,9 +141,19 @@ export default function ProjectPage() {
                   gap: '1rem',
                   fontSize: '0.875rem',
                   color: 'var(--color-text-secondary)',
+                  flexWrap: 'wrap',
                 }}>
                   <span>ステータス: {task.status}</span>
                   <span>優先度: {task.priority}</span>
+                  {task.start_date && (
+                    <span>開始: {new Date(task.start_date).toLocaleDateString('ja-JP')}</span>
+                  )}
+                  {task.due_date && (
+                    <span>期限: {new Date(task.due_date).toLocaleDateString('ja-JP')}</span>
+                  )}
+                  {task.assignees && task.assignees.length > 0 && (
+                    <span>担当: {task.assignees.join(', ')}</span>
+                  )}
                 </div>
               </div>
             ))}
