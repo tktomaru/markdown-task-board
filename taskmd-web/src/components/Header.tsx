@@ -51,11 +51,23 @@ export default function Header() {
           onClick={cycleTheme}
           title={t('common.theme')}
           style={{
-            padding: '0.25rem 0.5rem',
-            backgroundColor: 'transparent',
-            border: '1px solid var(--color-border)',
+            padding: '0.5rem 1rem',
+            backgroundColor: 'var(--color-bg-secondary)',
+            border: '2px solid var(--color-border)',
+            borderRadius: '6px',
             cursor: 'pointer',
-            fontSize: '1rem',
+            fontSize: '0.9375rem',
+            color: 'var(--color-text)',
+            fontWeight: '500',
+            transition: 'all 0.2s ease',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = 'var(--color-primary)'
+            e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = 'var(--color-border)'
+            e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)'
           }}
         >
           {getThemeIcon()} {t(`theme.${theme}`)}
@@ -65,10 +77,23 @@ export default function Header() {
           onClick={toggleLanguage}
           title={t('common.language')}
           style={{
-            padding: '0.25rem 0.5rem',
-            backgroundColor: 'transparent',
-            border: '1px solid var(--color-border)',
+            padding: '0.5rem 1rem',
+            backgroundColor: 'var(--color-bg-secondary)',
+            border: '2px solid var(--color-border)',
+            borderRadius: '6px',
             cursor: 'pointer',
+            fontSize: '0.9375rem',
+            color: 'var(--color-text)',
+            fontWeight: '500',
+            transition: 'all 0.2s ease',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = 'var(--color-primary)'
+            e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = 'var(--color-border)'
+            e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)'
           }}
         >
           {i18n.language === 'ja' ? '🇯🇵 日本語' : '🇬🇧 English'}
