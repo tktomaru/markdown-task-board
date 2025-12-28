@@ -64,7 +64,7 @@ func (r *ViewRepository) List(ctx context.Context, projectID string, ownerUserID
 		SELECT * FROM saved_views
 		WHERE project_id = $1
 			AND (scope = 'shared' OR owner_user_id = $2)
-		ORDER BY use_count DESC, created_at DESC
+		ORDER BY name ASC
 	`
 
 	var views []*models.SavedView
