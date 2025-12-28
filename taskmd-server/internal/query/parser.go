@@ -301,9 +301,28 @@ func (p *QueryParser) resolveRelativeDate(expr string) (string, error) {
 		return now.AddDate(0, 0, 1).Format("2006-01-02"), nil
 	}
 
-	// this_week, last_week, next_week
+	// this_week_start (Monday of this week)
+	if expr == "this_week_start" {
+		weekday := int(now.Weekday())
+		if weekday == 0 {
+			weekday = 7
+		}
+		monday := now.AddDate(0, 0, -(weekday - 1))
+		return monday.Format("2006-01-02"), nil
+	}
+
+	// this_week_end (Sunday of this week)
+	if expr == "this_week_end" {
+		weekday := int(now.Weekday())
+		if weekday == 0 {
+			weekday = 7
+		}
+		sunday := now.AddDate(0, 0, 7-weekday)
+		return sunday.Format("2006-01-02"), nil
+	}
+
+	// this_week (deprecated, use this_week_start)
 	if expr == "this_week" {
-		// Start of week (Monday)
 		weekday := int(now.Weekday())
 		if weekday == 0 {
 			weekday = 7
@@ -336,12 +355,62 @@ func (p *QueryParser) resolveRelativeDate(expr string) (string, error) {
 		return now.AddDate(0, 0, days).Format("2006-01-02"), nil
 	}
 
+	// last_weekday (e.g., last_monday, last_sunday)
+	lastWeekdayPattern := regexp.MustCompile(`^last_(monday|tuesday|wednesday|thursday|friday|saturday|sunday)$`)
+	if matches := lastWeekdayPattern.FindStringSubmatch(expr); matches != nil {
+		targetWeekday := parseWeekday(matches[1])
+		currentWeekday := int(now.Weekday())
+		if currentWeekday == 0 {
+			currentWeekday = 7
+		}
+
+		daysBack := currentWeekday - targetWeekday
+		if daysBack <= 0 {
+			daysBack += 7
+		}
+
+		targetDate := now.AddDate(0, 0, -daysBack)
+		return targetDate.Format("2006-01-02"), nil
+	}
+
+	// next_weekday (e.g., next_monday, next_sunday)
+	nextWeekdayPattern := regexp.MustCompile(`^next_(monday|tuesday|wednesday|thursday|friday|saturday|sunday)$`)
+	if matches := nextWeekdayPattern.FindStringSubmatch(expr); matches != nil {
+		targetWeekday := parseWeekday(matches[1])
+		currentWeekday := int(now.Weekday())
+		if currentWeekday == 0 {
+			currentWeekday = 7
+		}
+
+		daysForward := targetWeekday - currentWeekday
+		if daysForward <= 0 {
+			daysForward += 7
+		}
+
+		targetDate := now.AddDate(0, 0, daysForward)
+		return targetDate.Format("2006-01-02"), nil
+	}
+
 	// overdue
 	if expr == "overdue" {
 		return now.Format("2006-01-02"), nil // Will be used with < operator
 	}
 
 	return "", fmt.Errorf("unknown relative date: %s", expr)
+}
+
+// parseWeekday converts weekday name to number (Monday=1, Sunday=7)
+func parseWeekday(weekday string) int {
+	weekdays := map[string]int{
+		"monday":    1,
+		"tuesday":   2,
+		"wednesday": 3,
+		"thursday":  4,
+		"friday":    5,
+		"saturday":  6,
+		"sunday":    7,
+	}
+	return weekdays[weekday]
 }
 
 // isDateField checks if a field is a date field

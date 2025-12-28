@@ -57,10 +57,14 @@ export default function CreateViewModal({ isOpen, onClose, projectId, view }: Cr
 
   // Helper function to check if a date value is relative
   const isRelativeDate = (value: string): boolean => {
-    // Check for relative date patterns: today, -Nd, +Nd
+    // Check for relative date patterns: today, -Nd, +Nd, weekday patterns
     return value === 'today' ||
            /^-\d+d$/.test(value) ||
-           /^\+\d+d$/.test(value)
+           /^\+\d+d$/.test(value) ||
+           value === 'this_week_start' ||
+           value === 'this_week_end' ||
+           /^last_(monday|tuesday|wednesday|thursday|friday|saturday|sunday)$/.test(value) ||
+           /^next_(monday|tuesday|wednesday|thursday|friday|saturday|sunday)$/.test(value)
   }
 
   const parseQueryToFilters = (query: string): FilterCondition => {
@@ -496,6 +500,12 @@ export default function CreateViewModal({ isOpen, onClose, projectId, view }: Cr
                   }}
                 >
                   <option value="">指定なし</option>
+                  <option value="this_week_start">今週の開始（月曜日）</option>
+                  <option value="this_week_end">今週の終了（日曜日）</option>
+                  <option value="last_monday">前の月曜日</option>
+                  <option value="last_sunday">前の日曜日</option>
+                  <option value="next_monday">次の月曜日</option>
+                  <option value="next_sunday">次の日曜日</option>
                   <option value="-30d">30日前</option>
                   <option value="-14d">14日前</option>
                   <option value="-7d">7日前</option>
@@ -524,6 +534,12 @@ export default function CreateViewModal({ isOpen, onClose, projectId, view }: Cr
                   }}
                 >
                   <option value="">指定なし</option>
+                  <option value="this_week_start">今週の開始（月曜日）</option>
+                  <option value="this_week_end">今週の終了（日曜日）</option>
+                  <option value="last_monday">前の月曜日</option>
+                  <option value="last_sunday">前の日曜日</option>
+                  <option value="next_monday">次の月曜日</option>
+                  <option value="next_sunday">次の日曜日</option>
                   <option value="-30d">30日前</option>
                   <option value="-14d">14日前</option>
                   <option value="-7d">7日前</option>
@@ -560,6 +576,12 @@ export default function CreateViewModal({ isOpen, onClose, projectId, view }: Cr
                   }}
                 >
                   <option value="">指定なし</option>
+                  <option value="this_week_start">今週の開始（月曜日）</option>
+                  <option value="this_week_end">今週の終了（日曜日）</option>
+                  <option value="last_monday">前の月曜日</option>
+                  <option value="last_sunday">前の日曜日</option>
+                  <option value="next_monday">次の月曜日</option>
+                  <option value="next_sunday">次の日曜日</option>
                   <option value="-30d">30日前</option>
                   <option value="-14d">14日前</option>
                   <option value="-7d">7日前</option>
@@ -588,6 +610,12 @@ export default function CreateViewModal({ isOpen, onClose, projectId, view }: Cr
                   }}
                 >
                   <option value="">指定なし</option>
+                  <option value="this_week_start">今週の開始（月曜日）</option>
+                  <option value="this_week_end">今週の終了（日曜日）</option>
+                  <option value="last_monday">前の月曜日</option>
+                  <option value="last_sunday">前の日曜日</option>
+                  <option value="next_monday">次の月曜日</option>
+                  <option value="next_sunday">次の日曜日</option>
                   <option value="-30d">30日前</option>
                   <option value="-14d">14日前</option>
                   <option value="-7d">7日前</option>
